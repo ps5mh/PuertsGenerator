@@ -346,7 +346,7 @@ class Program
                                     continue;
                                 }
                             }
-                            if ((!type.HasGenericParameters || type.IsGenericInstance) && !isCompilerGenerated(type))
+                            if ((!type.HasGenericParameters || type.IsGenericInstance) && !isCompilerGenerated(type) && !type.Name.StartsWith("<"))
                             {
                                 typesToGen.Add(type);
                             }
