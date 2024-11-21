@@ -27,6 +27,10 @@ namespace {{ Name }} {
 {{ #Types }}
     {{ #DocumentLines }}
     {{.}}{{ /DocumentLines }}
+    {{ #IsEnum }}
+    enum {{{ Name }}} { {{{EnumKeyValues}}} }
+    {{ /IsEnum }}
+    {{ ^IsEnum }}
     class {{{ Name }}} extends {{ #BaseType }}{{{TypeScriptName}}}{{/BaseType}} {
         protected [__keep_incompatibility]: never;
 
@@ -43,6 +47,7 @@ namespace {{ Name }} {
         {{/Methods}}
 
     }
+    {{ /IsEnum }}
 
 {{/Types}}
 }

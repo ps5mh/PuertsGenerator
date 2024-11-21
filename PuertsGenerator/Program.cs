@@ -111,6 +111,10 @@ class Program
 
         public PropertyInfoCollected[] Properties;
 
+        public bool IsEnum = false;
+
+        public string EnumKeyValues;
+
         public string[] DocumentLines;
     }
 
@@ -234,6 +238,19 @@ class Program
     static TypeInfoCollected CollectInfo(TypeDefinition typeDefinition)
     {
         TypeInfoCollected res = CollectInfo(typeDefinition as TypeReference);
+        
+        if (res.DocumentLines == null)
+        {
+            res.DocumentLines = ToLines(DocResolver.GetTsDocument(typeDefinition));
+        }
+
+        res.IsEnum = typeDefinition.IsEnum;
+        if (res.IsEnum)
+        {
+            res.EnumKeyValues = string.Join(", ", typeDefinition.Fields.Where(f => f.Name != "value__" && f.IsPublic).Select(f => f.Name + " = " + f.Constant));
+            return res;
+        }
+
         if (typeDefinition.BaseType != null && res.BaseType == null)
         {
             res.BaseType = CollectInfo(typeDefinition.BaseType);
@@ -255,11 +272,6 @@ class Program
                 .Concat(typeDefinition.Fields.Select(CollectInfo))
                 .Where(p => p != null)
                 .ToArray();
-        }
-
-        if (res.DocumentLines == null)
-        {
-            res.DocumentLines = ToLines(DocResolver.GetTsDocument(typeDefinition));
         }
 
         return res;
