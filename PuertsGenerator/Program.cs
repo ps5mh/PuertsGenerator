@@ -241,8 +241,10 @@ class Program
 
         if (res.Methods == null)
         {
+            HashSet<string> names = typeDefinition.Properties.Select(p => p.Name).ToHashSet();
+            
             res.Methods = typeDefinition.Methods
-                .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && !m.IsSpecialName)
+                .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)))
                 .Select(CollectInfo).ToArray();
         }
 
