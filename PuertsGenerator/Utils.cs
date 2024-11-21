@@ -1,0 +1,90 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Nustache.Compilation;
+using Mono.Cecil;
+
+#nullable disable
+
+namespace PuertsGenerator
+{
+    internal class Utils
+    {
+        public static string GetTypeScriptName(TypeReference type, bool isParams = false)
+        {
+            TypeSystem typesystem = type.Module.TypeSystem;
+
+            if (type == typesystem.Int32)
+                return "number";
+            if (type == typesystem.UInt32)
+                return "number";
+            else if (type == typesystem.Int16)
+                return "number";
+            else if (type == typesystem.Byte)
+                return "number";
+            else if (type == typesystem.SByte)
+                return "number";
+            else if (type == typesystem.Char)
+                return "number";
+            else if (type == typesystem.UInt16)
+                return "number";
+            else if (type == typesystem.Boolean)
+                return "boolean";
+            else if (type == typesystem.Int64)
+                return "bigint";
+            else if (type == typesystem.UInt64)
+                return "bigint";
+            else if (type == typesystem.Single)
+                return "number";
+            else if (type == typesystem.Double)
+                return "number";
+            else if (type == typesystem.String)
+                return "string";
+            else if (type == typesystem.Void)
+                return "void";
+            else if (type.FullName == "Puerts.ArrayBuffer")
+                return "ArrayBuffer";
+            else if (type == typesystem.Object)
+                return "any";
+            else if (type.FullName == "System.Delegate" || type.FullName == "Puerts.GenericDelegate")
+                return "Function";
+            else if (type.FullName == "System.Threading.Tasks.Task")
+                return "$Task<any>";
+            else if (type.IsByReference)
+                return "$Ref<" + GetTypeScriptName((type as ByReferenceType).ElementType) + ">";
+            else if (type.IsArray)
+            {
+                var elementType = (type as ArrayType).ElementType;
+                return isParams ? (GetTypeScriptName(elementType) + "[]") : ("System.Array$1<" + GetTypeScriptName(elementType) + ">");
+            }
+            else if (type.IsGenericInstance)
+            {
+                var genericInstanceType = type as GenericInstanceType;
+                if (genericInstanceType.ElementType.Name == "Nullable`1" && genericInstanceType.ElementType.Namespace == "System")
+                {
+                    return GetTypeScriptName(genericInstanceType.GenericArguments[0]) + " | null";
+                }
+                var fullName = type.FullName == null ? type.ToString() : type.FullName;
+                var parts = fullName.Replace('+', '.').Split('`');
+                var argTypenames = genericInstanceType.GenericArguments
+                    .Select(x => GetTypeScriptName(x)).ToArray();
+                var pos = 0;
+                for(; pos < parts[1].Length; pos++)
+                {
+                    if (parts[1][pos] < '0' || parts[1][pos] > '9') break;
+                }
+                return parts[0] + '$' + parts[1].Substring(0, pos) + "<" + string.Join(", ", argTypenames) + ">";
+            }
+            else if (type.FullName == null)
+            {
+                return type.ToString();
+            }
+            else
+            {
+                return type.FullName.Replace('/', '.');
+            }
+        }
+    }
+}
