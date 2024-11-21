@@ -258,7 +258,18 @@ class Program
 
         if (res.Methods == null)
         {
-            HashSet<string> names = typeDefinition.Properties.Select(p => p.Name).ToHashSet();
+            HashSet<string> names = new HashSet<string>();
+            foreach (var p in typeDefinition.Properties)
+            {
+                if (p.GetMethod != null)
+                {
+                    names.Add(p.GetMethod.Name);
+                }
+                if (p.SetMethod != null)
+                {
+                    names.Add(p.SetMethod.Name);
+                }
+            }
             
             res.Methods = typeDefinition.Methods
                 .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)))
