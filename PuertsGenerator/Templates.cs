@@ -31,7 +31,7 @@ namespace {{ Name }} {
     enum {{{ Name }}} { {{{EnumKeyValues}}} }
     {{ /IsEnum }}
     {{ ^IsEnum }}
-    class {{{ Name }}} extends {{ #BaseType }}{{{TypeScriptName}}}{{/BaseType}} {
+    class {{{ Name }}} extends {{ #BaseType }}{{{TypeScriptName}}}{{/BaseType}}{{#WithImplements}} implements {{/WithImplements}}{{{Implements}}} {
         protected [__keep_incompatibility]: never;
 
         {{ #Properties }}

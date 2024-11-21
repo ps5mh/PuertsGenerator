@@ -115,6 +115,10 @@ class Program
 
         public string EnumKeyValues;
 
+        public string Implements;
+
+        public bool WithImplements = false;
+
         public string[] DocumentLines;
     }
 
@@ -238,7 +242,7 @@ class Program
     static TypeInfoCollected CollectInfo(TypeDefinition typeDefinition)
     {
         TypeInfoCollected res = CollectInfo(typeDefinition as TypeReference);
-        
+
         if (res.DocumentLines == null)
         {
             res.DocumentLines = ToLines(DocResolver.GetTsDocument(typeDefinition));
@@ -270,7 +274,7 @@ class Program
                     names.Add(p.SetMethod.Name);
                 }
             }
-            
+
             res.Methods = typeDefinition.Methods
                 .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)))
                 .Select(CollectInfo).ToArray();
@@ -285,7 +289,28 @@ class Program
                 .ToArray();
         }
 
+        if (res.Implements == null)
+        {
+            var interfaces = new List<TypeInfoCollected>();
+            retrieveInterfacesOfClass(typeDefinition, interfaces);
+            res.WithImplements = interfaces.Count > 0;
+            res.Implements = res.WithImplements ? string.Join(", ", interfaces.Select(i => i.TypeScriptName).ToArray()) : "";
+        }
+
         return res;
+    }
+
+    static void retrieveInterfacesOfClass(TypeDefinition typeDefinition, List<TypeInfoCollected> infos)
+    {
+        infos.InsertRange(0, typeDefinition.Interfaces.Select(i => CollectInfo(i.InterfaceType)));
+        try
+        {
+            if (typeDefinition.BaseType != null)
+            {
+                retrieveInterfacesOfClass(typeDefinition.BaseType.Resolve(), infos);
+            }
+        }
+        catch (Exception e) { }
     }
 
     static void Main(string[] args)
