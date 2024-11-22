@@ -201,10 +201,12 @@ namespace PuertsGenerator
 
             if (typeReference.IsGenericInstance)
             {
-                foreach (var gt in (typeReference as GenericInstanceType).GenericArguments)
+                var genericInstanceType = (typeReference as GenericInstanceType);
+                foreach (var gt in genericInstanceType.GenericArguments)
                 {
                     AddRefedType(gt);
                 }
+                AddRefedType(genericInstanceType.ElementType);
                 return;
             }
 
@@ -420,6 +422,10 @@ namespace PuertsGenerator
 
         static void retrieveInterfacesOfClass(TypeDefinition typeDefinition, List<TypeInfoCollected> infos)
         {
+            foreach(var itf in typeDefinition.Interfaces)
+            {
+                AddRefedType(itf.InterfaceType);
+            }
             infos.InsertRange(0, typeDefinition.Interfaces.Select(i => CollectInfo(i.InterfaceType)));
             try
             {
