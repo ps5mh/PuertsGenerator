@@ -32,7 +32,7 @@ declare namespace CS {
     {{ /IsEnum }}
     {{ ^IsEnum }}
     {{DeclareKeyword}} {{{ Name }}}{{#HasGenericParameters}}<{{#GenericParameters}}{{Name}}{{^IsLast}}, {{/IsLast}}{{/GenericParameters}}>{{/HasGenericParameters}}{{ #BaseType }} extends {{{Namespace}}}.{{{Name}}}{{/BaseType}}{{#WithImplements}} implements {{/WithImplements}}{{{Implements}}} {
-        {{#IsInterface}}protected [__keep_incompatibility]: never;{{/IsInterface}}
+        {{^IsInterface}}protected [__keep_incompatibility]: never;{{/IsInterface}}
 
         {{ #Properties }}
         {{ #DocumentLines }}
