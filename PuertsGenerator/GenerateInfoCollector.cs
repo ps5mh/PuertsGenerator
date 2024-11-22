@@ -255,7 +255,7 @@ namespace PuertsGenerator
             {
                 Name = propertyDefinition.Name,
                 IsStatic = IsStatic,
-                IsReadOnly = propertyDefinition.SetMethod == null,
+                IsReadOnly = propertyDefinition.SetMethod == null && !propertyDefinition.DeclaringType.IsInterface,
                 PropertyType = CollectInfo(propertyDefinition.PropertyType),
                 DocumentLines = ToLines(DocResolver.GetTsDocument(propertyDefinition))
             };
