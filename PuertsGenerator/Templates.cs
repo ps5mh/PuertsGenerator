@@ -43,7 +43,7 @@ namespace {{ Name }} {
         {{ #Methods }}
         {{ #DocumentLines }}
         {{.}}{{ /DocumentLines }}
-        public {{ #IsStatic }}static {{/IsStatic}}{{ #ReturnType }}{{{TypeScriptName}}}{{/ReturnType}} {{Name}}({{>ParameterList}});
+        public {{ #IsStatic }}static {{/IsStatic}}{{Name}}({{>ParameterList}}): {{ #ReturnType }}{{{TypeScriptName}}}{{/ReturnType}};
         {{/Methods}}
 
     }
