@@ -1,0 +1,7 @@
+{
+    "mscorlib": {
+        "Whitelist": ["System.Collections.Generic.List`1", "System.Collections.Generic.Dictionary`2"]
+    },
+    "UnityEngine.CoreModule": {
+    }
+}

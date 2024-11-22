@@ -8,18 +8,45 @@ using System.Diagnostics;
 using System.Text;
 using PuertsGenerator;
 using System.Linq;
+using System.Text.Json;
 
 #nullable disable
 
 class Program
 {
-    
 
     static void Main(string[] args)
     {
-        var template1 = new Template();
-        template1.Load(new StringReader(Templates.IndexDTs));
-        var compiled = template1.Compile<GenerateInfoCollector.GenCodeData>(null);
+        string jsonString = File.ReadAllText(args[0]);
+        Dictionary<string, AssemblyConfigure> conf = JsonSerializer.Deserialize<Dictionary<string, AssemblyConfigure>>(jsonString);
+
+        /*
+        foreach (var kvp in conf)
+        {
+            Console.WriteLine(kvp.Key);
+            AssemblyConfigure assemblyConfigure = kvp.Value;
+            if (assemblyConfigure.Whitelist != null)
+            {
+                Console.WriteLine("+++Whitelist");
+                for (int i = 0; i < assemblyConfigure.Whitelist.Length; i++)
+                {
+                    Console.WriteLine(assemblyConfigure.Whitelist[i]);
+                }
+            }
+            if (assemblyConfigure.Blacklist != null)
+            {
+                Console.WriteLine("---Blacklist");
+                for (int i = 0; i < assemblyConfigure.Blacklist.Length; i++)
+                {
+                    Console.WriteLine($"{assemblyConfigure.Blacklist[i]}");
+                }
+            }
+        }
+        */
+
+        var dtsTemplate = new Template();
+        dtsTemplate.Load(new StringReader(Templates.IndexDTs));
+        var compiled = dtsTemplate.Compile<GenerateInfoCollector.GenCodeData>(null);
 
         try
         {
@@ -27,15 +54,25 @@ class Program
 
             Stopwatch stopwatch = new Stopwatch();
 
-            foreach (var arg in args)
+            foreach (var arg in args.Skip(1))
             {
                 try
                 {
                     stopwatch.Start();
                     var assembly = AssemblyDefinition.ReadAssembly(arg);
                     stopwatch.Stop();
-                    Console.WriteLine($"Read  ${arg} using: {stopwatch.ElapsedMilliseconds} ms");
-
+                    Console.WriteLine($"Read {assembly.Name.Name}({arg}) using: {stopwatch.ElapsedMilliseconds} ms");
+                    AssemblyConfigure assemblyConfigure = conf[assembly.Name.Name];
+                    HashSet<string> whitelist = null;
+                    HashSet<string> blacklist = null;
+                    if (assemblyConfigure != null && assemblyConfigure.Whitelist != null)
+                    {
+                        whitelist = assemblyConfigure.Whitelist.ToHashSet();
+                    }
+                    if (assemblyConfigure != null && assemblyConfigure.Blacklist != null)
+                    {
+                        blacklist = assemblyConfigure.Blacklist.ToHashSet();
+                    }
                     stopwatch.Start();
                     foreach (var module in assembly.Modules)
                     {
@@ -43,17 +80,32 @@ class Program
                         {
                             if (Path.GetFileName(arg) == "mscorlib.dll")
                             {
-                                if (type.Name == "Dictionary`2" || type.Name == "List`1")
+                                if (type.Name == "Type" || type.Name == "Array")
                                 {
                                     typesToGen.Add(type);
                                     continue;
                                 }
-                                if (type.Name != "Type" && type.Name != "Array")
+                            }
+                            var typeKey = $"{type.Namespace}.{type.Name}";
+                            if (whitelist != null)
+                            {
+                                // 存在白名单就必须白名单有
+                                if (!whitelist.Contains(typeKey))
                                 {
                                     continue;
                                 }
                             }
-                            if ((!type.HasGenericParameters || type.IsGenericInstance) && !GenerateInfoCollector.isCompilerGenerated(type) && !type.Name.StartsWith("<"))
+
+                            if (blacklist != null)
+                            {
+                                // 存在黑名单，就必须黑名单没有
+                                if (blacklist.Contains(typeKey))
+                                {
+                                    continue;
+                                }
+                            }
+
+                            if (!GenerateInfoCollector.isCompilerGenerated(type) && !type.Name.StartsWith("<"))
                             {
                                 typesToGen.Add(type);
                             }
