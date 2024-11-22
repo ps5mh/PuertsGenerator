@@ -119,6 +119,8 @@ class Program
 
         public bool WithImplements = false;
 
+        public bool Proceed = false;
+
         public string[] DocumentLines;
     }
 
@@ -216,6 +218,8 @@ class Program
         };
     }
 
+    static string[] EmptyDocumentLines = new string[0];
+
     static TypeInfoCollected CollectInfo(TypeReference typeReference)
     {
         TypeInfoCollected res;
@@ -231,7 +235,8 @@ class Program
                 Name = typeReference.Name,
                 Namespace = typeReference.Namespace,
                 FullName = typeReference.FullName,
-                TypeScriptName = Utils.GetTypeScriptName(typeReference)
+                TypeScriptName = Utils.GetTypeScriptName(typeReference),
+                DocumentLines = EmptyDocumentLines,
             };
             fullnameToTypeInfo[key] = res;
         }
@@ -243,15 +248,15 @@ class Program
     {
         TypeInfoCollected res = CollectInfo(typeDefinition as TypeReference);
 
-        if (res.DocumentLines == null)
-        {
-            res.DocumentLines = ToLines(DocResolver.GetTsDocument(typeDefinition));
-        }
+        if (res.Proceed) return res;
+
+        res.DocumentLines = ToLines(DocResolver.GetTsDocument(typeDefinition));
 
         res.IsEnum = typeDefinition.IsEnum;
         if (res.IsEnum)
         {
             res.EnumKeyValues = string.Join(", ", typeDefinition.Fields.Where(f => f.Name != "value__" && f.IsPublic).Select(f => f.Name + " = " + f.Constant));
+            res.Proceed = true;
             return res;
         }
 
@@ -341,7 +346,7 @@ class Program
                         {
                             if (Path.GetFileName(arg) == "mscorlib.dll")
                             {
-                                if (type.Name != "Type")
+                                if (type.Name != "Type" && type.Name != "Array")
                                 {
                                     continue;
                                 }
@@ -358,7 +363,7 @@ class Program
 
             var data = new GenCodeData
             {
-                Namespaces = typesToGen.Select(CollectInfo)
+                Namespaces = typesToGen.Distinct().Select(CollectInfo)
                     .GroupBy(ti => ti.Namespace)
                     .Select(g => new NamespaceInfoCollected()
                     {
