@@ -106,6 +106,10 @@ namespace PuertsGenerator
 
             public bool IsEnum = false;
 
+            public bool IsInterface = false;
+
+            public string DeclareKeyword;
+
             public string EnumKeyValues;
 
             public string Implements;
@@ -322,7 +326,8 @@ namespace PuertsGenerator
                     TypeScriptName = Utils.GetTypeScriptName(typeReference),
                     DocumentLines = EmptyDocumentLines,
                     HasGenericParameters = typeReference.HasGenericParameters,
-                    GenericParameters = typeReference.GenericParameters.Select(CollectInfo).ToArray()
+                    GenericParameters = typeReference.GenericParameters.Select(CollectInfo).ToArray(),
+                    DeclareKeyword = "class"
                 };
                 if (res.GenericParameters.Length > 0)
                 {
@@ -336,6 +341,11 @@ namespace PuertsGenerator
                     var typeDef = typeReference.Resolve();
                     if (typeDef != null)
                     {
+                        res.IsInterface = typeDef.IsInterface;
+                        if (res.IsInterface)
+                        {
+                            res.DeclareKeyword = "interface";
+                        }
                         var baseType = typeDef.BaseType;
                         if (baseType != null)
                         {
@@ -362,8 +372,11 @@ namespace PuertsGenerator
             {
                 res.EnumKeyValues = string.Join(", ", typeDefinition.Fields.Where(f => f.Name != "value__" && f.IsPublic).Select(f => f.Name + " = " + f.Constant));
                 res.Proceed = true;
+                res.DeclareKeyword = "enum";
                 return res;
             }
+
+            res.IsInterface = typeDefinition.IsInterface;
 
             if (typeDefinition.BaseType != null)
             {
