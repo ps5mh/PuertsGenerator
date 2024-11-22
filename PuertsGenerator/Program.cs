@@ -99,6 +99,10 @@ class Program
         public string[] DocumentLines;
     }
 
+    static MethodInfoCollected[] EmptyMethodInfos = new MethodInfoCollected[0];
+
+    static PropertyInfoCollected[] EmptyPropertyInfos = new PropertyInfoCollected[0];
+
     class TypeInfoCollected
     {
         public string Name;
@@ -108,9 +112,9 @@ class Program
 
         public TypeInfoCollected BaseType;
 
-        public MethodInfoCollected[] Methods;
+        public MethodInfoCollected[] Methods = EmptyMethodInfos;
 
-        public PropertyInfoCollected[] Properties;
+        public PropertyInfoCollected[] Properties = EmptyPropertyInfos;
 
         public bool IsEnum = false;
 
@@ -122,7 +126,15 @@ class Program
 
         public bool Proceed = false;
 
+        public bool HasGenericParameters;
+
+        public TypeInfoCollected[] GenericParameters;
+
         public string[] DocumentLines;
+
+        public bool IsFirst = false;
+
+        public bool IsLast = false;
     }
 
     class NamespaceInfoCollected
@@ -297,14 +309,26 @@ class Program
                 FullName = typeReference.FullName,
                 TypeScriptName = Utils.GetTypeScriptName(typeReference),
                 DocumentLines = EmptyDocumentLines,
+                HasGenericParameters = typeReference.HasGenericParameters,
+                GenericParameters = typeReference.GenericParameters.Select(CollectInfo).ToArray()
             };
+            if (res.GenericParameters.Length > 0)
+            {
+                res.GenericParameters[0].IsFirst = true;
+                res.GenericParameters[res.GenericParameters.Length - 1].IsLast = true;
+            }
             fullnameToTypeInfo[key] = res;
+
             try
             {
-                var baseType = typeReference.Resolve()?.BaseType;
-                if ( baseType != null)
+                var typeDef = typeReference.Resolve();
+                if (typeDef != null)
                 {
-                    res.BaseType = CollectInfo(baseType);
+                    var baseType = typeDef.BaseType;
+                    if (baseType != null)
+                    {
+                        res.BaseType = CollectInfo(baseType);
+                    }
                 }
             }
             catch { }
@@ -329,47 +353,38 @@ class Program
             return res;
         }
 
-        if (typeDefinition.BaseType != null && res.BaseType == null)
+        if (typeDefinition.BaseType != null)
         {
             res.BaseType = CollectInfo(typeDefinition.BaseType);
         }
 
-        if (res.Methods == null)
+        HashSet<string> names = new HashSet<string>();
+        foreach (var p in typeDefinition.Properties)
         {
-            HashSet<string> names = new HashSet<string>();
-            foreach (var p in typeDefinition.Properties)
+            if (p.GetMethod != null)
             {
-                if (p.GetMethod != null)
-                {
-                    names.Add(p.GetMethod.Name);
-                }
-                if (p.SetMethod != null)
-                {
-                    names.Add(p.SetMethod.Name);
-                }
+                names.Add(p.GetMethod.Name);
             }
-
-            res.Methods = typeDefinition.Methods
-                .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)))
-                .Select(CollectInfo).ToArray();
+            if (p.SetMethod != null)
+            {
+                names.Add(p.SetMethod.Name);
+            }
         }
 
-        if (res.Properties == null)
-        {
-            res.Properties = typeDefinition.Properties
-                .Select(CollectInfo)
-                .Concat(typeDefinition.Fields.Select(CollectInfo))
-                .Where(p => p != null)
-                .ToArray();
-        }
+        res.Methods = typeDefinition.Methods
+            .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)))
+            .Select(CollectInfo).ToArray();
 
-        if (res.Implements == null)
-        {
-            var interfaces = new List<TypeInfoCollected>();
-            retrieveInterfacesOfClass(typeDefinition, interfaces);
-            res.WithImplements = interfaces.Count > 0;
-            res.Implements = res.WithImplements ? string.Join(", ", interfaces.Select(i => i.TypeScriptName).ToArray()) : "";
-        }
+        res.Properties = typeDefinition.Properties
+            .Select(CollectInfo)
+            .Concat(typeDefinition.Fields.Select(CollectInfo))
+            .Where(p => p != null)
+            .ToArray();
+
+        var interfaces = new List<TypeInfoCollected>();
+        retrieveInterfacesOfClass(typeDefinition, interfaces);
+        res.WithImplements = interfaces.Count > 0;
+        res.Implements = res.WithImplements ? string.Join(", ", interfaces.Select(i => i.TypeScriptName).ToArray()) : "";
 
         return res;
     }

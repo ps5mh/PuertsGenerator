@@ -31,7 +31,7 @@ namespace {{ Name }} {
     enum {{{ Name }}} { {{{EnumKeyValues}}} }
     {{ /IsEnum }}
     {{ ^IsEnum }}
-    class {{{ Name }}}{{ #BaseType }} extends {{{Namespace}}}.{{{Name}}}{{/BaseType}}{{#WithImplements}} implements {{/WithImplements}}{{{Implements}}} {
+    class {{{ Name }}}{{#HasGenericParameters}}<{{#GenericParameters}}{{Name}}{{^IsLast}}, {{/IsLast}}{{/GenericParameters}}>{{/HasGenericParameters}}{{ #BaseType }} extends {{{Namespace}}}.{{{Name}}}{{/BaseType}}{{#WithImplements}} implements {{/WithImplements}}{{{Implements}}} {
         protected [__keep_incompatibility]: never;
 
         {{ #Properties }}
