@@ -212,6 +212,7 @@ class Program
             {
                 AddRefedType(gt);
             }
+            return;
         }
 
         var rawType = Utils.GetRawType(typeReference);
@@ -221,7 +222,7 @@ class Program
         }
         typesRefed.Add(rawType);
 
-        //TODO: Delegate
+        //TODO: Delegate?
     }
 
     static PropertyInfoCollected CollectInfo(FieldDefinition fieldDefinition)
@@ -430,6 +431,11 @@ class Program
                         {
                             if (Path.GetFileName(arg) == "mscorlib.dll")
                             {
+                                if (type.Name == "Dictionary`2" || type.Name == "List`1")
+                                {
+                                    typesToGen.Add(type);
+                                    continue;
+                                }
                                 if (type.Name != "Type" && type.Name != "Array")
                                 {
                                     continue;
