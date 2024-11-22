@@ -13,7 +13,7 @@ using System.Collections.Generic;
 using System.Xml;
 using Mono.Cecil;
 
-namespace Puerts
+namespace PuertsGenerator
 {
     public class DocResolver
     {
