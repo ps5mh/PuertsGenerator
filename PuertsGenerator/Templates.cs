@@ -23,7 +23,7 @@ declare namespace CS {
     }
     interface $Task<T> {}
 {{ #Namespaces }}
-namespace {{ Name }} {
+{{ ^IsGlobal }} namespace {{ Name }} {{ /IsGlobal }}{
 {{ #Types }}
     {{ #DocumentLines }}
     {{.}}{{ /DocumentLines }}
@@ -37,13 +37,13 @@ namespace {{ Name }} {
         {{ #Properties }}
         {{ #DocumentLines }}
         {{.}}{{ /DocumentLines }}
-        public {{ #IsStatic }}static {{/IsStatic}}{{ #IsReadOnly }}get {{/IsReadOnly}}{{Name}}: {{ #PropertyType }}{{{TypeScriptName}}}{{/PropertyType}};
+        public {{ #IsStatic }}static {{/IsStatic}}{{ #IsReadOnly }}get {{/IsReadOnly}}{{Name}}{{ #IsReadOnly }}(){{/IsReadOnly}}: {{ #PropertyType }}{{{TypeScriptName}}}{{/PropertyType}};
         {{/Properties}}
 
         {{ #Methods }}
         {{ #DocumentLines }}
         {{.}}{{ /DocumentLines }}
-        public {{ #IsStatic }}static {{/IsStatic}}{{Name}}({{>ParameterList}}): {{ #ReturnType }}{{{TypeScriptName}}}{{/ReturnType}};
+        public {{ #IsStatic }}static {{/IsStatic}}{{Name}}({{>ParameterList}}){{ ^IsConstructor }}: {{ #ReturnType }}{{{TypeScriptName}}}{{/ReturnType}}{{ /IsConstructor }};
         {{/Methods}}
 
     }

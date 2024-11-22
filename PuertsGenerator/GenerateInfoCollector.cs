@@ -81,6 +81,10 @@ namespace PuertsGenerator
             public ParameterInfoCollected[] Parameters;
 
             public string[] DocumentLines;
+
+            public bool WithPointerType;
+
+            public bool IsConstructor;
         }
 
         static MethodInfoCollected[] EmptyMethodInfos = new MethodInfoCollected[0];
@@ -125,6 +129,7 @@ namespace PuertsGenerator
         {
             public string Name;
             public TypeInfoCollected[] Types;
+            public bool IsGlobal;
         }
 
 
@@ -199,6 +204,12 @@ namespace PuertsGenerator
                 return;
             }
 
+            if (typeReference.IsRequiredModifier)
+            {
+                AddRefedType(typeReference.GetElementType());
+                return;
+            }
+
             var rawType = Utils.GetRawType(typeReference);
             if (rawType.IsPointer || typeReference.IsPointer || rawType.IsGenericParameter)
             {
@@ -255,14 +266,24 @@ namespace PuertsGenerator
                 parameters[parameters.Length - 1].IsLast = true;
             }
 
+            bool WithPointerType = false;
+
             if (!methodDefinition.IsConstructor)
             {
                 AddRefedType(methodDefinition.ReturnType);
+                if(methodDefinition.ReturnType.IsPointer)
+                {
+                    WithPointerType = true;
+                }
             }
 
             foreach (var parameterType in methodDefinition.Parameters.Select(p => p.ParameterType))
             {
                 AddRefedType(parameterType);
+                if (parameterType.IsPointer)
+                {
+                    WithPointerType = true;
+                }
             }
 
             return new MethodInfoCollected()
@@ -271,6 +292,8 @@ namespace PuertsGenerator
                 IsStatic = methodDefinition.IsStatic,
                 ReturnType = CollectInfo(methodDefinition.ReturnType),
                 Parameters = parameters,
+                WithPointerType = WithPointerType,
+                IsConstructor = methodDefinition.IsConstructor,
                 DocumentLines = ToLines(DocResolver.GetTsDocument(methodDefinition)),
             };
         }
@@ -280,6 +303,10 @@ namespace PuertsGenerator
         static TypeInfoCollected CollectInfo(TypeReference typeReference)
         {
             TypeInfoCollected res;
+            if (typeReference.IsRequiredModifier)
+            {
+                typeReference = typeReference.GetElementType();
+            }
             var key = new TypeInfoCollectedKey
             {
                 FullName = typeReference.FullName,
@@ -357,12 +384,16 @@ namespace PuertsGenerator
             }
 
             res.Methods = typeDefinition.Methods
-                .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)))
-                .Select(CollectInfo).ToArray();
+                .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)) && !m.HasGenericParameters)
+                .Where(m => !m.ContainsGenericParameter || !m.IsStatic)
+                .Select(CollectInfo)
+                .Where(mi => !mi.WithPointerType)
+                .ToArray();
 
             res.Properties = typeDefinition.Properties
+                .Where(p => !p.PropertyType.IsPointer)
                 .Select(CollectInfo)
-                .Concat(typeDefinition.Fields.Select(CollectInfo))
+                .Concat(typeDefinition.Fields.Where(f => !f.FieldType.IsPointer).Select(CollectInfo))
                 .Where(p => p != null)
                 .ToArray();
 
@@ -390,16 +421,17 @@ namespace PuertsGenerator
         internal static GenCodeData Collect(IEnumerable<TypeDefinition> typesToGen)
         {
             var typeInfosToGen = typesToGen.Distinct().Select(CollectInfo).ToArray(); // force referenced types found
-            var typesToGenLookup = typesToGen.Cast<TypeReference>().ToHashSet();
+            var typesToGenLookup = typesToGen.Select(t => t.FullName).ToHashSet();
 
             return new GenCodeData
             {
-                Namespaces = typesRefed.Where(t => !typesToGenLookup.Contains(t)).Select(CollectInfo).Concat(typeInfosToGen)
+                Namespaces = typesRefed.Where(t => !typesToGenLookup.Contains(t.FullName)).DistinctBy((t) => t.FullName).Select(CollectInfo).Concat(typeInfosToGen)
                     .GroupBy(ti => ti.Namespace)
                     .Select(g => new NamespaceInfoCollected()
                     {
                         Name = g.Key,
-                        Types = g.ToArray()
+                        Types = g.ToArray(),
+                        IsGlobal = string.IsNullOrEmpty(g.Key),
                     })
                     .ToArray(),
             };
