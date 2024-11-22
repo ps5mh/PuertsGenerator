@@ -86,5 +86,19 @@ namespace PuertsGenerator
                 return type.FullName.Replace('/', '.');
             }
         }
+
+        public static TypeReference GetRawType(TypeReference type)
+        {
+            if (type.IsByReference )
+            {
+                return GetRawType((type as ByReferenceType).ElementType);
+            }
+            if (type.IsArray)
+            {
+                return GetRawType((type as ArrayType).ElementType);
+            }
+            if (type.IsGenericInstance) return (type as GenericInstanceType).ElementType;
+            return type;
+        }
     }
 }

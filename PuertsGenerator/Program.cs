@@ -9,6 +9,7 @@ using System.Text;
 using PuertsGenerator;
 using Puerts;
 using System.Linq;
+using System.ComponentModel;
 
 #nullable disable
 
@@ -164,12 +165,60 @@ class Program
         return doc.Split('\n');
     }
 
+    static List<TypeReference> typesRefed = new List<TypeReference>();
+    static HashSet<TypeReference> typesRefedLookup = new HashSet<TypeReference>();
+
+    static void AddRefedType(TypeReference typeReference)
+    {
+        if (typesRefedLookup.Contains(typeReference) || typeReference.Name.StartsWith("<"))
+        {
+            return;
+        }
+        typesRefedLookup.Add(typeReference);
+
+        try
+        {
+            var typeDef = typeReference.Resolve();
+            if (typeDef != null)
+            {
+                var baseType = typeDef.BaseType;
+                if (baseType != null)
+                {
+                    AddRefedType(baseType);
+                }
+                foreach(var itf in typeDef.Interfaces)
+                {
+                    AddRefedType(itf.InterfaceType);
+                }
+            }
+        }
+        catch { }
+
+        if (typeReference.IsGenericInstance)
+        {
+            foreach(var gt in (typeReference as GenericInstanceType).GenericArguments)
+            {
+                AddRefedType(gt);
+            }
+        }
+
+        var rawType = Utils.GetRawType(typeReference);
+        if (rawType.IsPointer || typeReference.IsPointer || rawType.IsGenericParameter)
+        {
+            return;
+        }
+        typesRefed.Add(rawType);
+
+        //TODO: Delegate
+    }
+
     static PropertyInfoCollected CollectInfo(FieldDefinition fieldDefinition)
     {
         if (!fieldDefinition.IsPublic)
         {
             return null; 
         }
+        AddRefedType(fieldDefinition.FieldType);
         return new PropertyInfoCollected()
         {
             Name = fieldDefinition.Name,
@@ -189,6 +238,7 @@ class Program
             return null;
         }
         bool IsStatic = propertyDefinition.GetMethod != null ? propertyDefinition.GetMethod.IsStatic : propertyDefinition.SetMethod.IsStatic;
+        AddRefedType(propertyDefinition.PropertyType);
         return new PropertyInfoCollected()
         {
             Name = propertyDefinition.Name,
@@ -206,6 +256,16 @@ class Program
         {
             parameters[0].IsFirst = true;
             parameters[parameters.Length- 1].IsLast = true;
+        }
+
+        if (!methodDefinition.IsConstructor)
+        {
+            AddRefedType(methodDefinition.ReturnType);
+        }
+
+        foreach (var parameterType in methodDefinition.Parameters.Select(p => p.ParameterType))
+        {
+            AddRefedType(parameterType);
         }
 
         return new MethodInfoCollected()
@@ -232,13 +292,22 @@ class Program
         {
             res = new TypeInfoCollected()
             {
-                Name = typeReference.Name,
+                Name = typeReference.Name.Replace('`', '$'),
                 Namespace = typeReference.Namespace,
                 FullName = typeReference.FullName,
                 TypeScriptName = Utils.GetTypeScriptName(typeReference),
                 DocumentLines = EmptyDocumentLines,
             };
             fullnameToTypeInfo[key] = res;
+            try
+            {
+                var baseType = typeReference.Resolve()?.BaseType;
+                if ( baseType != null)
+                {
+                    res.BaseType = CollectInfo(baseType);
+                }
+            }
+            catch { }
         }
 
         return res;
@@ -315,7 +384,7 @@ class Program
                 retrieveInterfacesOfClass(typeDefinition.BaseType.Resolve(), infos);
             }
         }
-        catch (Exception e) { }
+        catch { }
     }
 
     static void Main(string[] args)
@@ -361,9 +430,12 @@ class Program
                 catch { }
             }
 
+            var typeInfosToGen = typesToGen.Distinct().Select(CollectInfo).ToArray(); // force referenced types found
+            var typesToGenLookup = typesToGen.Cast<TypeReference>().ToHashSet();
+
             var data = new GenCodeData
             {
-                Namespaces = typesToGen.Distinct().Select(CollectInfo)
+                Namespaces = typesRefed.Where(t => !typesToGenLookup.Contains(t)).Select(CollectInfo).Concat(typeInfosToGen)
                     .GroupBy(ti => ti.Namespace)
                     .Select(g => new NamespaceInfoCollected()
                     {
