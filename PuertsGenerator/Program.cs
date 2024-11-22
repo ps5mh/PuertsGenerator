@@ -20,6 +20,8 @@ class Program
         string jsonString = File.ReadAllText(args[0]);
         Dictionary<string, AssemblyConfigure> conf = JsonSerializer.Deserialize<Dictionary<string, AssemblyConfigure>>(jsonString);
 
+        var output = args[1];
+
         /*
         foreach (var kvp in conf)
         {
@@ -54,7 +56,7 @@ class Program
 
             Stopwatch stopwatch = new Stopwatch();
 
-            foreach (var arg in args.Skip(1))
+            foreach (var arg in args.Skip(2))
             {
                 try
                 {
@@ -124,7 +126,7 @@ class Program
             stopwatch.Stop();
             Console.WriteLine($"Gen Code using: {stopwatch.ElapsedMilliseconds} ms, type.Count = {typesToGen.Count}");
             //private void FillPropertyGroup(ref EditorCurveBinding?[] propertyGroup, EditorCurveBinding lastBinding, string propertyGroupName, ref List<AnimationWindowCurve> curvesCache)
-            using (StreamWriter textWriter = new StreamWriter("index.d.ts", false, Encoding.UTF8))
+            using (StreamWriter textWriter = new StreamWriter(output, false, Encoding.UTF8))
             {
                 textWriter.WriteLine(dts);
             }
