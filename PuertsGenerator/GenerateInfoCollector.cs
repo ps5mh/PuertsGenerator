@@ -65,9 +65,9 @@ namespace PuertsGenerator
 
             public TypeInfoCollected ParameterType;
 
-            public bool IsFirst;
+            public bool IsFirst = false;
 
-            public bool IsLast;
+            public bool IsLast = false;
         }
 
         internal class MethodInfoCollected
@@ -90,6 +90,13 @@ namespace PuertsGenerator
         static MethodInfoCollected[] EmptyMethodInfos = new MethodInfoCollected[0];
 
         static PropertyInfoCollected[] EmptyPropertyInfos = new PropertyInfoCollected[0];
+
+        internal class GenericParameterInfoCollected
+        {
+            public string Name;
+            public bool IsFirst = false;
+            public bool IsLast = false;
+        }
 
         internal class TypeInfoCollected
         {
@@ -120,13 +127,9 @@ namespace PuertsGenerator
 
             public bool HasGenericParameters;
 
-            public TypeInfoCollected[] GenericParameters;
+            public GenericParameterInfoCollected[] GenericParameters;
 
             public string[] DocumentLines;
-
-            public bool IsFirst = false;
-
-            public bool IsLast = false;
         }
 
         internal class NamespaceInfoCollected
@@ -156,8 +159,6 @@ namespace PuertsGenerator
             {
                 Name = parameterDefinition.Name,
                 ParameterType = CollectInfo(parameterDefinition.ParameterType),
-                IsFirst = false,
-                IsLast = false,
             };
         }
 
@@ -328,7 +329,7 @@ namespace PuertsGenerator
                     TypeScriptName = Utils.GetTypeScriptName(typeReference),
                     DocumentLines = EmptyDocumentLines,
                     HasGenericParameters = typeReference.HasGenericParameters,
-                    GenericParameters = typeReference.GenericParameters.Select(CollectInfo).ToArray(),
+                    GenericParameters = typeReference.GenericParameters.Select(gp =>new GenericParameterInfoCollected { Name = gp.Name}).ToArray(),
                     DeclareKeyword = "class"
                 };
                 if (res.GenericParameters.Length > 0)

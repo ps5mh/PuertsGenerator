@@ -129,6 +129,7 @@ class Program
             using (StreamWriter textWriter = new StreamWriter(output, false, Encoding.UTF8))
             {
                 textWriter.WriteLine(dts);
+                //textWriter.WriteLine(Render.StringToString(Templates.IndexDTs, data));
             }
         }
         catch (Exception ex)
