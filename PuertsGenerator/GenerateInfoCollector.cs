@@ -460,6 +460,7 @@ namespace PuertsGenerator
 
             res.Properties = typeDefinition.Properties
                 .Where(p => !p.PropertyType.IsPointer)
+                .DistinctBy(p => p.Name)
                 .Select(CollectInfo)
                 .Where(p => p != null)
                 .Where(pi => !pi.Raw.ContainsGenericParameter || !pi.IsStatic)
