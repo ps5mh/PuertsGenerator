@@ -75,11 +75,11 @@ namespace PuertsGenerator
                 {
                     if (parts[1][pos] < '0' || parts[1][pos] > '9') break;
                 }
-                return parts[0] + '$' + parts[1].Substring(0, pos) + "<" + string.Join(", ", argTypenames) + ">";
+                return parts[0].Replace('/', '.') + '$' + parts[1].Substring(0, pos) + "<" + string.Join(", ", argTypenames) + ">";
             }
             else if (type.FullName == null)
             {
-                return type.ToString();
+                return type.ToString().Replace('/', '.');
             }
             else
             {

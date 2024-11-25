@@ -15,6 +15,19 @@ using System.Text.Json;
 class Program
 {
 
+    static void AddGenType(TypeDefinition type, List<TypeDefinition> types)
+    {
+        if (type.HasNestedTypes)
+        {
+            foreach (var nt in type.NestedTypes)
+            {
+                if (!GenerateInfoCollector.isCompilerGenerated(nt)) types.Add(nt);
+            }
+        }
+
+        types.Add(type);
+    }
+
     static void Main(string[] args)
     {
         string jsonString = File.ReadAllText(args[0]);
@@ -84,7 +97,7 @@ class Program
                             {
                                 if (type.Name == "Type" || type.Name == "Array")
                                 {
-                                    typesToGen.Add(type);
+                                    AddGenType(type, typesToGen);
                                     continue;
                                 }
                             }
@@ -107,9 +120,9 @@ class Program
                                 }
                             }
 
-                            if (type.IsPublic && !GenerateInfoCollector.isCompilerGenerated(type) && !type.Name.StartsWith("<"))
+                            if ((type.IsPublic) && !GenerateInfoCollector.isCompilerGenerated(type) && !type.Name.StartsWith("<"))
                             {
-                                typesToGen.Add(type);
+                                AddGenType(type, typesToGen);
                             }
                         }
                     }
