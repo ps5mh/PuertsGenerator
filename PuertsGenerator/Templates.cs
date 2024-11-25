@@ -31,6 +31,7 @@ declare namespace CS {
     enum {{{ Name }}} { {{{EnumKeyValues}}} }
     {{ /IsEnum }}
     {{ ^IsEnum }}
+    {{ ^IsDelegate }}
     {{DeclareKeyword}} {{{ Name }}}{{#HasGenericParameters}}<{{#GenericParameters}}{{Name}}{{^IsLast}}, {{/IsLast}}{{/GenericParameters}}>{{/HasGenericParameters}}{{ #BaseType }} extends {{{FullName}}}{{/BaseType}}{{#WithImplements}} {{ImplementsKeyword}} {{/WithImplements}}{{{Implements}}} {
         {{^IsInterface}}protected [__keep_incompatibility]: never;{{/IsInterface}}
 
@@ -57,6 +58,16 @@ declare namespace CS {
         {{/Methods}}
 
     }
+    {{ /IsDelegate }}
+    {{ #IsDelegate }}
+    {{DeclareKeyword}} {{{ Name }}}{{#HasGenericParameters}}<{{#GenericParameters}}{{Name}}{{^IsLast}}, {{/IsLast}}{{/GenericParameters}}>{{/HasGenericParameters}} {
+        ({{{ DelegateParmaters }}}) : {{{ DelegateReturnType }}}; 
+        Invoke?: ({{{ DelegateParmaters }}}) =>  {{{ DelegateReturnType }}};
+    }
+    {{ ^HasGenericParameters }}
+    var  {{{ Name }}}: { new (func: () => void):  {{{ Name }}}; }
+    {{/HasGenericParameters}}
+    {{ /IsDelegate }}
     {{ /IsEnum }}
 
 {{/Types}}

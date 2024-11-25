@@ -122,6 +122,11 @@ namespace PuertsGenerator
 
             public bool IsInterface = false;
 
+            public bool IsDelegate = false;
+
+            public string DelegateParmaters;
+            public string DelegateReturnType;
+
             public string ImplementsKeyword = "implements";
 
             public string DeclareKeyword;
@@ -407,6 +412,7 @@ namespace PuertsGenerator
             TypeInfoCollected res = CollectInfo(typeDefinition as TypeReference);
 
             if (res.Proceed) return res;
+            res.Proceed = true;
 
             res.DocumentLines = ToLines(DocResolver.GetTsDocument(typeDefinition));
 
@@ -434,8 +440,25 @@ namespace PuertsGenerator
             if (res.IsEnum)
             {
                 res.EnumKeyValues = string.Join(", ", typeDefinition.Fields.Where(f => f.Name != "value__" && f.IsPublic).Select(f => f.Name + " = " + f.Constant));
-                res.Proceed = true;
                 res.DeclareKeyword = "enum";
+                return res;
+            }
+
+            res.IsDelegate = Utils.IsDelegate(typeDefinition);
+            if (res.IsDelegate)
+            {
+                res.DeclareKeyword = "interface";
+                if (typeDefinition.FullName == "System.Delegate" || typeDefinition.FullName == "System.MulticastDelegate")
+                {
+                    res.DelegateParmaters = "...args:any[]";
+                    res.DelegateReturnType = "any";
+                }
+                else
+                {
+                    var invoke = typeDefinition.Methods.First(m => m.Name == "Invoke");
+                    res.DelegateParmaters = string.Join(", ", invoke.Parameters.Select(pi => $"{pi.Name}: {Utils.GetTypeScriptName(pi.ParameterType)}").ToArray());
+                    res.DelegateReturnType = Utils.GetTypeScriptName(invoke.ReturnType);
+                }
                 return res;
             }
 

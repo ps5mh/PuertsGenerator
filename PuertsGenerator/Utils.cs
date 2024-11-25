@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Nustache.Compilation;
 using Mono.Cecil;
+using System.Runtime.CompilerServices;
 
 #nullable disable
 
@@ -54,6 +55,10 @@ namespace PuertsGenerator
                 return "$Task<any>";
             else if (type.IsByReference)
                 return "$Ref<" + GetTypeScriptName((type as ByReferenceType).ElementType) + ">";
+            else if (type.IsRequiredModifier)
+            {
+                return GetTypeScriptName(type.GetElementType());
+            }
             else if (type.IsArray)
             {
                 var elementType = (type as ArrayType).ElementType;
@@ -99,6 +104,24 @@ namespace PuertsGenerator
             }
             if (type.IsGenericInstance) return (type as GenericInstanceType).ElementType;
             return type;
+        }
+
+        public static bool IsDelegate(TypeReference type)
+        {
+            if (type == null)
+            {
+                return false;
+            }
+            if (type.FullName == "System.Delegate" || type.FullName == "System.MulticastDelegate")
+            {
+                return true;
+            }
+            var td = type.Resolve();
+            if (td != null)
+            {
+                return IsDelegate(td.BaseType);
+            }
+            return false;
         }
     }
 }
