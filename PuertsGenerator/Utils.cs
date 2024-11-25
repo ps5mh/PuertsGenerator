@@ -116,11 +116,15 @@ namespace PuertsGenerator
             {
                 return true;
             }
-            var td = type.Resolve();
-            if (td != null)
+            try
             {
-                return IsDelegate(td.BaseType);
+                var td = type.Resolve();
+                if (td != null)
+                {
+                    return IsDelegate(td.BaseType);
+                }
             }
+            catch { }
             return false;
         }
     }
