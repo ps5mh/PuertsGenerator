@@ -37,7 +37,17 @@ declare namespace CS {
         {{ #Properties }}
         {{ #DocumentLines }}
         {{.}}{{ /DocumentLines }}
-        {{^IsInterface}}public {{/IsInterface}}{{ #IsStatic }}static {{/IsStatic}}{{ #IsReadOnly }}get {{/IsReadOnly}}{{Name}}{{ #IsReadOnly }}(){{/IsReadOnly}}: {{ #PropertyType }}{{{TypeScriptName}}}{{/PropertyType}};
+        {{ #AsMethod }}
+        {{ #Getter }}
+        {{^IsInterface}}public {{/IsInterface}}{{ #IsStatic }}static {{/IsStatic}}get {{Name}}(): {{ #PropertyType }}{{{TypeScriptName}}}{{/PropertyType}};
+        {{ /Getter }}
+        {{ #Setter }}
+        {{^IsInterface}}public {{/IsInterface}}{{ #IsStatic }}static {{/IsStatic}}set {{Name}}(value: {{ #PropertyType }}{{{TypeScriptName}}}{{/PropertyType}});
+        {{ /Setter }}
+        {{ /AsMethod }}
+        {{ ^AsMethod }}
+        {{^IsInterface}}public {{/IsInterface}}{{ #IsStatic }}static {{/IsStatic}}{{Name}}: {{ #PropertyType }}{{{TypeScriptName}}}{{/PropertyType}};
+        {{ /AsMethod }}
         {{/Properties}}
 
         {{ #Methods }}

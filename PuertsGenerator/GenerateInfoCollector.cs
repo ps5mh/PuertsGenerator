@@ -52,7 +52,11 @@ namespace PuertsGenerator
 
             public bool IsStatic;
 
-            public bool IsReadOnly;
+            public bool AsMethod = false;
+
+            public bool Getter = false;
+
+            public bool Setter = false;
 
             public TypeInfoCollected PropertyType;
 
@@ -256,7 +260,6 @@ namespace PuertsGenerator
             {
                 Name = fieldDefinition.Name,
                 IsStatic = fieldDefinition.IsStatic,
-                IsReadOnly = false,
                 PropertyType = CollectInfo(fieldDefinition.FieldType),
                 DocumentLines = ToLines(DocResolver.GetTsDocument(fieldDefinition)),
             };
@@ -276,7 +279,9 @@ namespace PuertsGenerator
             {
                 Name = propertyDefinition.Name,
                 IsStatic = IsStatic,
-                IsReadOnly = propertyDefinition.SetMethod == null && !propertyDefinition.DeclaringType.IsInterface,
+                AsMethod = !propertyDefinition.DeclaringType.IsInterface,
+                Getter = getterPublic,
+                Setter = setterPublic,
                 PropertyType = CollectInfo(propertyDefinition.PropertyType),
                 Raw = propertyDefinition,
                 DocumentLines = ToLines(DocResolver.GetTsDocument(propertyDefinition))
