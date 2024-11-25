@@ -427,6 +427,7 @@ namespace PuertsGenerator
 
             if (typeDefinition.BaseType != null)
             {
+                AddRefedType(typeDefinition.BaseType);
                 res.BaseType = CollectInfo(typeDefinition.BaseType);
             }
 
