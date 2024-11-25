@@ -61,7 +61,7 @@ namespace PuertsGenerator
 
             public TypeInfoCollected PropertyType;
 
-            public PropertyDefinition Raw;
+            public bool ContainsGenericParameter;
 
             public string[] DocumentLines;
         }
@@ -276,6 +276,18 @@ namespace PuertsGenerator
             {
                 return null;
             }
+            var containsGenericParameter = propertyDefinition.ContainsGenericParameter;
+            if (!containsGenericParameter)
+            {
+                if (propertyDefinition.GetMethod != null)
+                {
+                    containsGenericParameter = propertyDefinition.GetMethod.ContainsGenericParameter;
+                }
+                if (propertyDefinition.SetMethod != null)
+                {
+                    containsGenericParameter = propertyDefinition.SetMethod.ContainsGenericParameter;
+                }
+            }
             bool IsStatic = propertyDefinition.GetMethod != null ? propertyDefinition.GetMethod.IsStatic : propertyDefinition.SetMethod.IsStatic;
             AddRefedType(propertyDefinition.PropertyType);
             return new PropertyInfoCollected()
@@ -286,7 +298,7 @@ namespace PuertsGenerator
                 Getter = getterPublic,
                 Setter = setterPublic,
                 PropertyType = CollectInfo(propertyDefinition.PropertyType),
-                Raw = propertyDefinition,
+                ContainsGenericParameter = containsGenericParameter,
                 DocumentLines = ToLines(DocResolver.GetTsDocument(propertyDefinition))
             };
         }
@@ -473,7 +485,7 @@ namespace PuertsGenerator
                 .DistinctBy(p => p.Name)
                 .Select(CollectInfo)
                 .Where(p => p != null)
-                .Where(pi => !pi.Raw.ContainsGenericParameter || !pi.IsStatic)
+                .Where(pi => !pi.ContainsGenericParameter || !pi.IsStatic)
                 .Concat(typeDefinition.Fields.Where(f => !f.FieldType.IsPointer && (!f.ContainsGenericParameter || !f.IsStatic)).Select(CollectInfo))
                 .Where(p => p != null)
                 .ToArray();
