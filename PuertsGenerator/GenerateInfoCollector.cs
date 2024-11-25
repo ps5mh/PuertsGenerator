@@ -453,11 +453,11 @@ namespace PuertsGenerator
             }
 
             List<MethodDefinition> mustAdd = new List<MethodDefinition>();
-            findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition, mustAdd, false);
+            findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition.IsAbstract, typeDefinition, mustAdd, false);
 
-            foreach (var ma in mustAdd)
+            //foreach (var ma in mustAdd)
             {
-                Console.WriteLine($"{typeDefinition} >>> ${ma}");
+            //    Console.WriteLine($"{typeDefinition} >>> ${ma}");
             }
 
             res.Methods = typeDefinition.Methods
@@ -496,7 +496,7 @@ namespace PuertsGenerator
             return (b == baseOrNot) ? true : isOverride(b, baseOrNot);
         }
 
-        static void findSameNameButNotOverride(Dictionary<string, IEnumerable<MethodDefinition>> methodMap, TypeDefinition baseType, List<MethodDefinition> result, bool findThisType)
+        static void findSameNameButNotOverride(Dictionary<string, IEnumerable<MethodDefinition>> methodMap, bool checkTypeIsAbstract, TypeDefinition baseType, List<MethodDefinition> result, bool findThisType)
         {
             if (findThisType)
             {
@@ -514,6 +514,10 @@ namespace PuertsGenerator
                         }
                         if (!found) result.Add(m);
                     }
+                    else
+                    {
+                        result.Add(m);
+                    }
                 }
             }
             //if (baseType.BaseType != null)
@@ -521,17 +525,17 @@ namespace PuertsGenerator
             //    var td = baseType.BaseType.Resolve();
             //    if (td != null)
             //    {
-            //        findSameNameButNotOverride(methodMap, td, result, true);
+            //        findSameNameButNotOverride(methodMap, checkTypeIsAbstract, td, result, true);
             //    }
             //}
-            if (baseType.IsInterface)
+            if (baseType.IsInterface || checkTypeIsAbstract)
             {
                 foreach (var itf in baseType.Interfaces)
                 {
                     var td = itf.InterfaceType.Resolve();
                     if (td != null)
                     {
-                        findSameNameButNotOverride(methodMap, td, result, true);
+                        findSameNameButNotOverride(methodMap, checkTypeIsAbstract, td, result, true);
                     }
                 }
             }
