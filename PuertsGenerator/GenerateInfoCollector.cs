@@ -216,6 +216,12 @@ namespace PuertsGenerator
                 {
                     if (gp.Name.Contains('!'))
                     {
+                        //AddRefedType(typeReference.GetElementType());
+                        try
+                        {
+                            var typeDef = typeReference.Resolve();
+                            if (typeDef != null) { AddRefedType(typeDef); }
+                        } catch { }
                         return;
                     }
                 }
