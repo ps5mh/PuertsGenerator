@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Mono.Cecil;
+using Mono.Cecil.Rocks;
 
 #nullable disable
 
@@ -451,9 +452,18 @@ namespace PuertsGenerator
                 }
             }
 
+            List<MethodDefinition> mustAdd = new List<MethodDefinition>();
+            findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition, mustAdd, false);
+
+            foreach (var ma in mustAdd)
+            {
+                Console.WriteLine($"{typeDefinition} >>> ${ma}");
+            }
+
             res.Methods = typeDefinition.Methods
                 .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)) && !m.HasGenericParameters)
                 .Where(m => !m.ContainsGenericParameter || !m.IsStatic)
+                .Concat(mustAdd)
                 .Select(CollectInfo)
                 .Where(mi => !mi.WithPointerType)
                 .ToArray();
@@ -474,6 +484,62 @@ namespace PuertsGenerator
             res.Implements = res.WithImplements ? string.Join(", ", interfaces.Select(i => i.TypeScriptName).ToArray()) : "";
 
             return res;
+        }
+
+        static bool isOverride(MethodDefinition method, MethodDefinition baseOrNot)
+        {
+            var b = method.GetBaseMethod();
+            if ( b == null || b == method)
+            {
+                return false;
+            }
+            return (b == baseOrNot) ? true : isOverride(b, baseOrNot);
+        }
+
+        static void findSameNameButNotOverride(Dictionary<string, IEnumerable<MethodDefinition>> methodMap, TypeDefinition baseType, List<MethodDefinition> result, bool findThisType)
+        {
+            if (findThisType)
+            {
+                foreach (var m in baseType.Methods)
+                {
+                    if (methodMap.TryGetValue(m.Name, out IEnumerable<MethodDefinition> methods))
+                    {
+                        bool found = false;
+                        foreach (var m2 in methods)
+                        {
+                            if (isOverride(m2, m))
+                            {
+                                found = true;
+                            }
+                        }
+                        if (!found) result.Add(m);
+                    }
+                }
+            }
+            //if (baseType.BaseType != null)
+            //{
+            //    var td = baseType.BaseType.Resolve();
+            //    if (td != null)
+            //    {
+            //        findSameNameButNotOverride(methodMap, td, result, true);
+            //    }
+            //}
+            if (baseType.IsInterface)
+            {
+                foreach (var itf in baseType.Interfaces)
+                {
+                    var td = itf.InterfaceType.Resolve();
+                    if (td != null)
+                    {
+                        findSameNameButNotOverride(methodMap, td, result, true);
+                    }
+                }
+            }
+        }
+
+        static void retrieveMethodToOverride(TypeDefinition typeDefinition)
+        {
+            ///typeDefinition.Methods[0].GetBaseMethod
         }
 
         static void retrieveInterfacesOfClass(TypeDefinition typeDefinition, List<TypeInfoCollected> infos)
