@@ -107,7 +107,7 @@ class Program
                                 }
                             }
 
-                            if (!GenerateInfoCollector.isCompilerGenerated(type) && !type.Name.StartsWith("<"))
+                            if (type.IsPublic && !GenerateInfoCollector.isCompilerGenerated(type) && !type.Name.StartsWith("<"))
                             {
                                 typesToGen.Add(type);
                             }

@@ -434,6 +434,37 @@ namespace PuertsGenerator
             res.WithImplements = interfaces.Count > 0;
             res.Implements = res.WithImplements ? string.Join(", ", interfaces.Select(i => i.TypeScriptName).ToArray()) : "";
 
+            if (typeDefinition.IsNested)
+            {
+                var nsp = new List<string>();
+                var temp = typeDefinition;
+                while (temp.IsNested)
+                {
+                    nsp.Add(temp.DeclaringType.Name.Replace('`', '$'));
+                    temp = temp.DeclaringType;
+                }
+                nsp.Reverse();
+                if (!string.IsNullOrEmpty(temp.Namespace))
+                {
+                    res.Namespace = temp.Namespace + '.' + string.Join(".", nsp.ToArray());
+                }
+                else
+                {
+                    res.Namespace = string.Join(".", nsp.ToArray());
+                }
+            }
+
+            return res;
+        }
+
+        static IEnumerable<TypeInfoCollected> CollectInfoWithNested(TypeDefinition typeDefinition)
+        {
+            List<TypeInfoCollected> res = new List<TypeInfoCollected>();
+            res.Add(CollectInfo(typeDefinition));
+            if (typeDefinition.HasNestedTypes)
+            {
+                res.AddRange(typeDefinition.NestedTypes.Where(t => t.IsNestedPublic && !isCompilerGenerated(t)).SelectMany(CollectInfoWithNested));
+            }
             return res;
         }
 
@@ -456,7 +487,7 @@ namespace PuertsGenerator
 
         internal static GenCodeData Collect(IEnumerable<TypeDefinition> typesToGen)
         {
-            var typeInfosToGen = typesToGen.Distinct().Select(CollectInfo).ToArray(); // force referenced types found
+            var typeInfosToGen = typesToGen.Distinct().SelectMany(CollectInfoWithNested).ToArray(); // force referenced types found
             var typesToGenLookup = typesToGen.Select(t => t.FullName).ToHashSet();
 
             return new GenCodeData
