@@ -121,6 +121,8 @@ namespace PuertsGenerator
 
             public bool IsInterface = false;
 
+            public string ImplementsKeyword = "implements";
+
             public string DeclareKeyword;
 
             public string EnumKeyValues;
@@ -372,6 +374,7 @@ namespace PuertsGenerator
                         if (res.IsInterface)
                         {
                             res.DeclareKeyword = "interface";
+                            res.ImplementsKeyword = "extends";
                         }
                         var baseType = typeDef.BaseType;
                         if (baseType != null)
@@ -424,6 +427,10 @@ namespace PuertsGenerator
             }
 
             res.IsInterface = typeDefinition.IsInterface;
+            if (res.IsInterface)
+            {
+                res.ImplementsKeyword = "extends";
+            }
 
             if (typeDefinition.BaseType != null)
             {
