@@ -56,6 +56,8 @@ namespace PuertsGenerator
 
             public TypeInfoCollected PropertyType;
 
+            public PropertyDefinition Raw;
+
             public string[] DocumentLines;
         }
 
@@ -276,6 +278,7 @@ namespace PuertsGenerator
                 IsStatic = IsStatic,
                 IsReadOnly = propertyDefinition.SetMethod == null && !propertyDefinition.DeclaringType.IsInterface,
                 PropertyType = CollectInfo(propertyDefinition.PropertyType),
+                Raw = propertyDefinition,
                 DocumentLines = ToLines(DocResolver.GetTsDocument(propertyDefinition))
             };
         }
@@ -445,7 +448,9 @@ namespace PuertsGenerator
             res.Properties = typeDefinition.Properties
                 .Where(p => !p.PropertyType.IsPointer)
                 .Select(CollectInfo)
-                .Concat(typeDefinition.Fields.Where(f => !f.FieldType.IsPointer).Select(CollectInfo))
+                .Where(p => p != null)
+                .Where(pi => !pi.Raw.ContainsGenericParameter || !pi.IsStatic)
+                .Concat(typeDefinition.Fields.Where(f => !f.FieldType.IsPointer && (!f.ContainsGenericParameter || !f.IsStatic)).Select(CollectInfo))
                 .Where(p => p != null)
                 .ToArray();
 
