@@ -21,7 +21,7 @@ class Program
         {
             foreach (var nt in type.NestedTypes)
             {
-                if (!GenerateInfoCollector.isCompilerGenerated(nt)) types.Add(nt);
+                if (nt.IsNestedPublic && !GenerateInfoCollector.isCompilerGenerated(nt)) AddGenType(nt, types);
             }
         }
 
