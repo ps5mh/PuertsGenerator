@@ -352,7 +352,7 @@ namespace PuertsGenerator
                 {
                     Name = typeReference.Name.Replace('`', '$'),
                     Namespace = typeReference.Namespace,
-                    FullName = typeReference.FullName,
+                    FullName = typeReference.FullName.Replace('`', '$').Replace('/', '.'),
                     TypeScriptName = Utils.GetTypeScriptName(typeReference),
                     DocumentLines = EmptyDocumentLines,
                     HasGenericParameters = typeReference.HasGenericParameters,

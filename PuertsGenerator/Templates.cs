@@ -31,7 +31,7 @@ declare namespace CS {
     enum {{{ Name }}} { {{{EnumKeyValues}}} }
     {{ /IsEnum }}
     {{ ^IsEnum }}
-    {{DeclareKeyword}} {{{ Name }}}{{#HasGenericParameters}}<{{#GenericParameters}}{{Name}}{{^IsLast}}, {{/IsLast}}{{/GenericParameters}}>{{/HasGenericParameters}}{{ #BaseType }} extends {{{Namespace}}}.{{{Name}}}{{/BaseType}}{{#WithImplements}} {{ImplementsKeyword}} {{/WithImplements}}{{{Implements}}} {
+    {{DeclareKeyword}} {{{ Name }}}{{#HasGenericParameters}}<{{#GenericParameters}}{{Name}}{{^IsLast}}, {{/IsLast}}{{/GenericParameters}}>{{/HasGenericParameters}}{{ #BaseType }} extends {{{FullName}}}{{/BaseType}}{{#WithImplements}} {{ImplementsKeyword}} {{/WithImplements}}{{{Implements}}} {
         {{^IsInterface}}protected [__keep_incompatibility]: never;{{/IsInterface}}
 
         {{ #Properties }}
