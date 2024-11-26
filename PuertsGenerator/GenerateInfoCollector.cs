@@ -478,7 +478,11 @@ namespace PuertsGenerator
             res.DocumentLines = ToLines(DocResolver.GetTsDocument(typeDefinition));
 
             List<MethodDefinition> mustAdd = new List<MethodDefinition>();
-            findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition.IsAbstract, typeDefinition, mustAdd, false);
+            findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition, mustAdd, false);
+            if (typeDefinition.IsAbstract)
+            {
+                addInterfaceMethods(typeDefinition, mustAdd, false);
+            }
 
             HashSet<string> names = new HashSet<string>();
             foreach (var p in typeDefinition.Properties)
@@ -495,8 +499,8 @@ namespace PuertsGenerator
 
             res.Methods = typeDefinition.Methods
                 .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)) && !m.HasGenericParameters)
-                .Where(m => !m.ContainsGenericParameter || !m.IsStatic)
                 .Concat(mustAdd)
+                .Where(m => !m.ContainsGenericParameter || !m.IsStatic)
                 .Select(CollectInfo)
                 .Where(mi => !mi.WithPointerType)
                 .ToArray();
@@ -529,9 +533,9 @@ namespace PuertsGenerator
             return (b == baseOrNot) ? true : isOverride(b, baseOrNot);
         }
 
-        static void findSameNameButNotOverride(Dictionary<string, IEnumerable<MethodDefinition>> methodMap, bool checkTypeIsAbstract, TypeDefinition baseType, List<MethodDefinition> result, bool findThisType)
+        static void findSameNameButNotOverride(Dictionary<string, IEnumerable<MethodDefinition>> methodMap, TypeDefinition baseType, List<MethodDefinition> result, bool add)
         {
-            if (findThisType)
+            if (add)
             {
                 foreach (var m in baseType.Methods)
                 {
@@ -547,30 +551,35 @@ namespace PuertsGenerator
                         }
                         if (!found) result.Add(m);
                     }
-                    else
-                    {
-                        result.Add(m);
-                    }
                 }
             }
-            //if (baseType.BaseType != null)
-            //{
-            //    var td = baseType.BaseType.Resolve();
-            //    if (td != null)
-            //    {
-            //        findSameNameButNotOverride(methodMap, checkTypeIsAbstract, td, result, true);
-            //    }
-            //}
-            if (baseType.IsInterface || checkTypeIsAbstract)
+            if (baseType.BaseType != null)
             {
-                foreach (var itf in baseType.Interfaces)
+                var td = baseType.BaseType.Resolve();
+                if (td != null)
                 {
-                    var td = itf.InterfaceType.Resolve();
+                    findSameNameButNotOverride(methodMap, td, result, true);
+                }
+            }
+        }
+
+        static void addInterfaceMethods(TypeDefinition itf, List<MethodDefinition> result, bool add)
+        {
+            if (add)
+            {
+                result.AddRange(itf.Methods);
+            }
+
+            foreach (var itfInfo in itf.Interfaces)
+            {
+                try
+                {
+                    var td = itfInfo.InterfaceType.Resolve();
                     if (td != null)
                     {
-                        findSameNameButNotOverride(methodMap, checkTypeIsAbstract, td, result, true);
+                        addInterfaceMethods(td, result, true);
                     }
-                }
+                } catch { }
             }
         }
 
