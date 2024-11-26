@@ -388,7 +388,7 @@ namespace PuertsGenerator
                     var typeDef = typeReference.Resolve();
                     if (typeDef != null)
                     {
-                        CollectInfo(typeDef, true);
+                        fillBaseInfo(res, typeDef);
                     }
                 }
                 catch { }
@@ -397,15 +397,61 @@ namespace PuertsGenerator
             return res;
         }
 
-        static TypeInfoCollected CollectInfo(TypeDefinition typeDefinition, bool skipMembers)
+        static void fillBaseInfo(TypeInfoCollected info, TypeDefinition type)
+        {
+            info.IsEnum = type.IsEnum;
+            if (info.IsEnum)
+            {
+                info.EnumKeyValues = string.Join(", ", type.Fields.Where(f => f.Name != "value__" && f.IsPublic).Select(f => f.Name + " = " + f.Constant));
+                info.DeclareKeyword = "enum";
+                info.Proceed = true;
+                return;
+            }
+
+            info.IsDelegate = Utils.IsDelegate(type);
+            if (info.IsDelegate)
+            {
+                info.DeclareKeyword = "interface";
+                if (type.FullName == "System.Delegate" || type.FullName == "System.MulticastDelegate")
+                {
+                    info.DelegateParmaters = "...args:any[]";
+                    info.DelegateReturnType = "any";
+                }
+                else
+                {
+                    var invoke = type.Methods.First(m => m.Name == "Invoke");
+                    info.DelegateParmaters = string.Join(", ", invoke.Parameters.Select(pi => $"{pi.Name}: {Utils.GetTypeScriptName(pi.ParameterType)}").ToArray());
+                    info.DelegateReturnType = Utils.GetTypeScriptName(invoke.ReturnType);
+                }
+                info.Proceed = true;
+                return;
+            }
+
+            info.IsInterface = type.IsInterface;
+            if (info.IsInterface)
+            {
+                info.DeclareKeyword = "interface";
+                info.ImplementsKeyword = "extends";
+            }
+
+            if (type.BaseType != null)
+            {
+                AddRefedType(type.BaseType);
+                info.BaseType = CollectInfo(type.BaseType);
+            }
+        }
+
+        static TypeInfoCollected CollectInfo(TypeDefinition typeDefinition)
         {
             TypeInfoCollected res = CollectInfo(typeDefinition as TypeReference);
 
-            if (!skipMembers)
-            {
-                if (res.Proceed) return res;
-                res.Proceed = true;
-            }
+            if (res.Proceed) return res;
+
+            fillBaseInfo(res, typeDefinition);
+
+            if (res.Proceed) return res;
+
+            res.Proceed = true;
 
             res.DocumentLines = ToLines(DocResolver.GetTsDocument(typeDefinition));
 
@@ -429,44 +475,8 @@ namespace PuertsGenerator
                 }
             }
 
-            res.IsEnum = typeDefinition.IsEnum;
-            if (res.IsEnum)
-            {
-                res.EnumKeyValues = string.Join(", ", typeDefinition.Fields.Where(f => f.Name != "value__" && f.IsPublic).Select(f => f.Name + " = " + f.Constant));
-                res.DeclareKeyword = "enum";
-                return res;
-            }
-
-            res.IsDelegate = Utils.IsDelegate(typeDefinition);
-            if (res.IsDelegate)
-            {
-                res.DeclareKeyword = "interface";
-                if (typeDefinition.FullName == "System.Delegate" || typeDefinition.FullName == "System.MulticastDelegate")
-                {
-                    res.DelegateParmaters = "...args:any[]";
-                    res.DelegateReturnType = "any";
-                }
-                else
-                {
-                    var invoke = typeDefinition.Methods.First(m => m.Name == "Invoke");
-                    res.DelegateParmaters = string.Join(", ", invoke.Parameters.Select(pi => $"{pi.Name}: {Utils.GetTypeScriptName(pi.ParameterType)}").ToArray());
-                    res.DelegateReturnType = Utils.GetTypeScriptName(invoke.ReturnType);
-                }
-                return res;
-            }
-
-            res.IsInterface = typeDefinition.IsInterface;
-            if (res.IsInterface)
-            {
-                res.DeclareKeyword = "interface";
-                res.ImplementsKeyword = "extends";
-            }
-
-            if (typeDefinition.BaseType != null)
-            {
-                AddRefedType(typeDefinition.BaseType);
-                res.BaseType = CollectInfo(typeDefinition.BaseType);
-            }
+            List<MethodDefinition> mustAdd = new List<MethodDefinition>();
+            findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition.IsAbstract, typeDefinition, mustAdd, false);
 
             HashSet<string> names = new HashSet<string>();
             foreach (var p in typeDefinition.Properties)
@@ -481,35 +491,28 @@ namespace PuertsGenerator
                 }
             }
 
-            List<MethodDefinition> mustAdd = new List<MethodDefinition>();
-            findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition.IsAbstract, typeDefinition, mustAdd, false);
+            res.Methods = typeDefinition.Methods
+                .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)) && !m.HasGenericParameters)
+                .Where(m => !m.ContainsGenericParameter || !m.IsStatic)
+                .Concat(mustAdd)
+                .Select(CollectInfo)
+                .Where(mi => !mi.WithPointerType)
+                .ToArray();
 
+            res.Properties = typeDefinition.Properties
+                .Where(p => !p.PropertyType.IsPointer)
+                .DistinctBy(p => p.Name)
+                .Select(CollectInfo)
+                .Where(p => p != null)
+                .Where(pi => !pi.ContainsGenericParameter || !pi.IsStatic)
+                .Concat(typeDefinition.Fields.Where(f => !f.FieldType.IsPointer && (!f.ContainsGenericParameter || !f.IsStatic)).Select(CollectInfo))
+                .Where(p => p != null)
+                .ToArray();
 
             var interfaces = new List<TypeInfoCollected>();
             retrieveInterfacesOfClass(typeDefinition, interfaces);
             res.WithImplements = interfaces.Count > 0;
             res.Implements = res.WithImplements ? string.Join(", ", interfaces.Select(i => i.TypeScriptName).ToArray()) : "";
-
-            if (!skipMembers)
-            {
-                res.Methods = typeDefinition.Methods
-                    .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)) && !m.HasGenericParameters)
-                    .Where(m => !m.ContainsGenericParameter || !m.IsStatic)
-                    .Concat(mustAdd)
-                    .Select(CollectInfo)
-                    .Where(mi => !mi.WithPointerType)
-                    .ToArray();
-
-                res.Properties = typeDefinition.Properties
-                    .Where(p => !p.PropertyType.IsPointer)
-                    .DistinctBy(p => p.Name)
-                    .Select(CollectInfo)
-                    .Where(p => p != null)
-                    .Where(pi => !pi.ContainsGenericParameter || !pi.IsStatic)
-                    .Concat(typeDefinition.Fields.Where(f => !f.FieldType.IsPointer && (!f.ContainsGenericParameter || !f.IsStatic)).Select(CollectInfo))
-                    .Where(p => p != null)
-                    .ToArray();
-            }
 
             return res;
         }
@@ -593,12 +596,12 @@ namespace PuertsGenerator
 
         internal static GenCodeData Collect(IEnumerable<TypeDefinition> typesToGen)
         {
-            var typeInfosToGen = typesToGen.Distinct().Select(t => CollectInfo(t, false)).ToArray(); // force referenced types found
+            var typeInfosToGen = typesToGen.Distinct().Select(CollectInfo).ToArray(); // force referenced types found
             var typesToGenLookup = typesToGen.Select(t => t.FullName).ToHashSet();
 
             return new GenCodeData
             {
-                Namespaces = typesRefed.Where(t => !typesToGenLookup.Contains(t.FullName)).DistinctBy((t) => t.FullName).ToArray().Select(CollectInfo).Concat(typeInfosToGen)
+                Namespaces = typesRefed.Where(t => !typesToGenLookup.Contains(t.FullName)).DistinctBy((t) => t.FullName).Select(CollectInfo).Concat(typeInfosToGen)
                     .GroupBy(ti => ti.Namespace)
                     .Select(g => new NamespaceInfoCollected()
                     {
