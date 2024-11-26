@@ -23,7 +23,9 @@ declare namespace CS {
     }
     interface $Task<T> {}
 {{ #Namespaces }}
-{{ ^IsGlobal }} namespace {{ Name }} {{ /IsGlobal }}{
+{{ ^IsGlobal }}
+namespace {{ Name }} {
+{{ /IsGlobal }}
 {{ #Types }}
     {{ #DocumentLines }}
     {{.}}{{ /DocumentLines }}
@@ -72,7 +74,9 @@ declare namespace CS {
     {{ /IsEnum }}
 
 {{/Types}}
+{{ ^IsGlobal }}
 }
+{{ /IsGlobal }}
 
 {{/Namespaces}}
 }
