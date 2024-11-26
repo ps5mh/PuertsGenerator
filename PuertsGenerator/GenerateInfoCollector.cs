@@ -606,14 +606,14 @@ namespace PuertsGenerator
                 AddRefedType(itf.InterfaceType);
             }
             infos.InsertRange(0, typeDefinition.Interfaces.Select(i => CollectInfo(i.InterfaceType)));
-            try
-            {
-                if (typeDefinition.BaseType != null)
-                {
-                    retrieveInterfacesOfClass(typeDefinition.BaseType.Resolve(), infos);
-                }
-            }
-            catch { }
+            //try
+            //{
+            //    if (typeDefinition.BaseType != null)
+            //    {
+            //        retrieveInterfacesOfClass(typeDefinition.BaseType.Resolve(), infos);
+            //    }
+            //}
+            //catch { }
         }
 
         internal static GenCodeData Collect(IEnumerable<TypeDefinition> typesToGen)
