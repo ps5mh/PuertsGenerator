@@ -212,7 +212,7 @@ namespace PuertsGenerator
                         AddRefedType(itf.InterfaceType);
                     }
                 }
-                if (Utils.IsDelegate(typeDef) && typeDef.FullName != "System.Delegate" && typeDef.FullName != "System.MulticastDelegate")
+                if (Utils.IsDelegate(typeDef) && typeDef.FullName != "System.MulticastDelegate")
                 {
                     var invoke = typeDef.Methods.First(m => m.Name == "Invoke");
                     AddRefedType(invoke.ReturnType);
@@ -441,7 +441,7 @@ namespace PuertsGenerator
             if (info.IsDelegate)
             {
                 info.DeclareKeyword = "interface";
-                if (type.FullName == "System.Delegate" || type.FullName == "System.MulticastDelegate")
+                if (type.FullName == "System.MulticastDelegate")
                 {
                     info.DelegateParmaters = "...args:any[]";
                     info.DelegateReturnType = "any";

@@ -112,7 +112,7 @@ namespace PuertsGenerator
             {
                 return false;
             }
-            if (type.FullName == "System.Delegate" || type.FullName == "System.MulticastDelegate")
+            if (type.FullName == "System.MulticastDelegate")
             {
                 return true;
             }
