@@ -69,6 +69,13 @@ class Program
 
             Stopwatch stopwatch = new Stopwatch();
 
+            List<string> searchDirectors = new List<string>();
+
+            foreach (var arg in args.Skip(2))
+            {
+                searchDirectors.Add(Path.GetDirectoryName(Path.GetFullPath(arg)));
+            }
+
             foreach (var arg in args.Skip(2))
             {
                 try
@@ -91,6 +98,14 @@ class Program
                     stopwatch.Start();
                     foreach (var module in assembly.Modules)
                     {
+                        var baseResolver = module.AssemblyResolver as BaseAssemblyResolver;
+                        if (baseResolver != null)
+                        {
+                            foreach (var dir in searchDirectors)
+                            {
+                                baseResolver.AddSearchDirectory(dir);
+                            }
+                        }
                         foreach (var type in module.Types)
                         {
                             if (Path.GetFileName(arg) == "mscorlib.dll")
