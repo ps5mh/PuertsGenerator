@@ -507,7 +507,7 @@ namespace PuertsGenerator
             res.Methods = typeDefinition.Methods
                 .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)) && !m.HasGenericParameters)
                 .Concat(mustAdd)
-                .Where(m => !m.ContainsGenericParameter || !m.IsStatic)
+                .Where(m => !m.ContainsGenericParameter)
                 .Select(CollectInfo)
                 .Where(mi => !mi.WithPointerType)
                 .ToArray();
