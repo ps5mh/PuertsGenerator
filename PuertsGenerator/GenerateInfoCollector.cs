@@ -388,17 +388,7 @@ namespace PuertsGenerator
                     var typeDef = typeReference.Resolve();
                     if (typeDef != null)
                     {
-                        res.IsInterface = typeDef.IsInterface;
-                        if (res.IsInterface)
-                        {
-                            res.DeclareKeyword = "interface";
-                            res.ImplementsKeyword = "extends";
-                        }
-                        var baseType = typeDef.BaseType;
-                        if (baseType != null)
-                        {
-                            res.BaseType = CollectInfo(baseType);
-                        }
+                        CollectInfo(typeDef, true);
                     }
                 }
                 catch { }
@@ -407,12 +397,15 @@ namespace PuertsGenerator
             return res;
         }
 
-        static TypeInfoCollected CollectInfo(TypeDefinition typeDefinition)
+        static TypeInfoCollected CollectInfo(TypeDefinition typeDefinition, bool skipMembers)
         {
             TypeInfoCollected res = CollectInfo(typeDefinition as TypeReference);
 
-            if (res.Proceed) return res;
-            res.Proceed = true;
+            if (!skipMembers)
+            {
+                if (res.Proceed) return res;
+                res.Proceed = true;
+            }
 
             res.DocumentLines = ToLines(DocResolver.GetTsDocument(typeDefinition));
 
@@ -465,6 +458,7 @@ namespace PuertsGenerator
             res.IsInterface = typeDefinition.IsInterface;
             if (res.IsInterface)
             {
+                res.DeclareKeyword = "interface";
                 res.ImplementsKeyword = "extends";
             }
 
@@ -490,33 +484,32 @@ namespace PuertsGenerator
             List<MethodDefinition> mustAdd = new List<MethodDefinition>();
             findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition.IsAbstract, typeDefinition, mustAdd, false);
 
-            //foreach (var ma in mustAdd)
-            {
-            //    Console.WriteLine($"{typeDefinition} >>> ${ma}");
-            }
-
-            res.Methods = typeDefinition.Methods
-                .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)) && !m.HasGenericParameters)
-                .Where(m => !m.ContainsGenericParameter || !m.IsStatic)
-                .Concat(mustAdd)
-                .Select(CollectInfo)
-                .Where(mi => !mi.WithPointerType)
-                .ToArray();
-
-            res.Properties = typeDefinition.Properties
-                .Where(p => !p.PropertyType.IsPointer)
-                .DistinctBy(p => p.Name)
-                .Select(CollectInfo)
-                .Where(p => p != null)
-                .Where(pi => !pi.ContainsGenericParameter || !pi.IsStatic)
-                .Concat(typeDefinition.Fields.Where(f => !f.FieldType.IsPointer && (!f.ContainsGenericParameter || !f.IsStatic)).Select(CollectInfo))
-                .Where(p => p != null)
-                .ToArray();
 
             var interfaces = new List<TypeInfoCollected>();
             retrieveInterfacesOfClass(typeDefinition, interfaces);
             res.WithImplements = interfaces.Count > 0;
             res.Implements = res.WithImplements ? string.Join(", ", interfaces.Select(i => i.TypeScriptName).ToArray()) : "";
+
+            if (!skipMembers)
+            {
+                res.Methods = typeDefinition.Methods
+                    .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)) && !m.HasGenericParameters)
+                    .Where(m => !m.ContainsGenericParameter || !m.IsStatic)
+                    .Concat(mustAdd)
+                    .Select(CollectInfo)
+                    .Where(mi => !mi.WithPointerType)
+                    .ToArray();
+
+                res.Properties = typeDefinition.Properties
+                    .Where(p => !p.PropertyType.IsPointer)
+                    .DistinctBy(p => p.Name)
+                    .Select(CollectInfo)
+                    .Where(p => p != null)
+                    .Where(pi => !pi.ContainsGenericParameter || !pi.IsStatic)
+                    .Concat(typeDefinition.Fields.Where(f => !f.FieldType.IsPointer && (!f.ContainsGenericParameter || !f.IsStatic)).Select(CollectInfo))
+                    .Where(p => p != null)
+                    .ToArray();
+            }
 
             return res;
         }
@@ -600,12 +593,12 @@ namespace PuertsGenerator
 
         internal static GenCodeData Collect(IEnumerable<TypeDefinition> typesToGen)
         {
-            var typeInfosToGen = typesToGen.Distinct().Select(CollectInfo).ToArray(); // force referenced types found
+            var typeInfosToGen = typesToGen.Distinct().Select(t => CollectInfo(t, false)).ToArray(); // force referenced types found
             var typesToGenLookup = typesToGen.Select(t => t.FullName).ToHashSet();
 
             return new GenCodeData
             {
-                Namespaces = typesRefed.Where(t => !typesToGenLookup.Contains(t.FullName)).DistinctBy((t) => t.FullName).Select(CollectInfo).Concat(typeInfosToGen)
+                Namespaces = typesRefed.Where(t => !typesToGenLookup.Contains(t.FullName)).DistinctBy((t) => t.FullName).ToArray().Select(CollectInfo).Concat(typeInfosToGen)
                     .GroupBy(ti => ti.Namespace)
                     .Select(g => new NamespaceInfoCollected()
                     {
