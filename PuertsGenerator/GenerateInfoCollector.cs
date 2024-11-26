@@ -478,11 +478,11 @@ namespace PuertsGenerator
             res.DocumentLines = ToLines(DocResolver.GetTsDocument(typeDefinition));
 
             List<MethodDefinition> mustAdd = new List<MethodDefinition>();
-            findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition, mustAdd, false);
             if (typeDefinition.IsAbstract)
             {
                 addInterfaceMethods(typeDefinition, mustAdd, false);
             }
+            findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).Concat(mustAdd).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition, typeDefinition, mustAdd, false);
 
             HashSet<string> names = new HashSet<string>();
             foreach (var p in typeDefinition.Properties)
@@ -533,7 +533,7 @@ namespace PuertsGenerator
             return (b == baseOrNot) ? true : isOverride(b, baseOrNot);
         }
 
-        static void findSameNameButNotOverride(Dictionary<string, IEnumerable<MethodDefinition>> methodMap, TypeDefinition baseType, List<MethodDefinition> result, bool add)
+        static void findSameNameButNotOverride(Dictionary<string, IEnumerable<MethodDefinition>> methodMap, TypeDefinition debugType, TypeDefinition baseType, List<MethodDefinition> result, bool add)
         {
             if (add)
             {
@@ -558,8 +558,12 @@ namespace PuertsGenerator
                 var td = baseType.BaseType.Resolve();
                 if (td != null)
                 {
-                    findSameNameButNotOverride(methodMap, td, result, true);
+                    findSameNameButNotOverride(methodMap, debugType, td, result, true);
                 }
+            }
+            if (debugType.FullName == "System.Array")
+            {
+
             }
         }
 
