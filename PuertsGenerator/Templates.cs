@@ -27,6 +27,7 @@ declare namespace CS {
 {{ #Types }}
     {{ #DocumentLines }}
     {{.}}{{ /DocumentLines }}
+    // {{{ModuleFileName}}}
     {{ #IsEnum }}
     enum {{{ Name }}} { {{{EnumKeyValues}}} }
     {{ /IsEnum }}
