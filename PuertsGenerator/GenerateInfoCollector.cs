@@ -212,6 +212,15 @@ namespace PuertsGenerator
                         AddRefedType(itf.InterfaceType);
                     }
                 }
+                if (Utils.IsDelegate(typeDef) && typeDef.FullName != "System.Delegate" && typeDef.FullName != "System.MulticastDelegate")
+                {
+                    var invoke = typeDef.Methods.First(m => m.Name == "Invoke");
+                    AddRefedType(invoke.ReturnType);
+                    foreach(var pi in invoke.Parameters)
+                    {
+                        AddRefedType(pi.ParameterType);
+                    }
+                }
             }
             catch { }
 
@@ -254,8 +263,6 @@ namespace PuertsGenerator
                 return;
             }
             typesRefed.Add(rawType);
-
-            //TODO: Delegate?
         }
 
         static PropertyInfoCollected CollectInfo(FieldDefinition fieldDefinition)
