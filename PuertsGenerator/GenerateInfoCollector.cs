@@ -399,6 +399,26 @@ namespace PuertsGenerator
 
         static void fillBaseInfo(TypeInfoCollected info, TypeDefinition type)
         {
+            if (type.IsNested)
+            {
+                var nsp = new List<string>();
+                var temp = type;
+                while (temp.IsNested)
+                {
+                    nsp.Add(temp.DeclaringType.Name.Replace('`', '$'));
+                    temp = temp.DeclaringType;
+                }
+                nsp.Reverse();
+                if (!string.IsNullOrEmpty(temp.Namespace))
+                {
+                    info.Namespace = temp.Namespace + '.' + string.Join(".", nsp.ToArray());
+                }
+                else
+                {
+                    info.Namespace = string.Join(".", nsp.ToArray());
+                }
+            }
+
             info.IsEnum = type.IsEnum;
             if (info.IsEnum)
             {
@@ -454,26 +474,6 @@ namespace PuertsGenerator
             res.Proceed = true;
 
             res.DocumentLines = ToLines(DocResolver.GetTsDocument(typeDefinition));
-
-            if (typeDefinition.IsNested)
-            {
-                var nsp = new List<string>();
-                var temp = typeDefinition;
-                while (temp.IsNested)
-                {
-                    nsp.Add(temp.DeclaringType.Name.Replace('`', '$'));
-                    temp = temp.DeclaringType;
-                }
-                nsp.Reverse();
-                if (!string.IsNullOrEmpty(temp.Namespace))
-                {
-                    res.Namespace = temp.Namespace + '.' + string.Join(".", nsp.ToArray());
-                }
-                else
-                {
-                    res.Namespace = string.Join(".", nsp.ToArray());
-                }
-            }
 
             List<MethodDefinition> mustAdd = new List<MethodDefinition>();
             findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition.IsAbstract, typeDefinition, mustAdd, false);
