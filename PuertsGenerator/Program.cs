@@ -116,7 +116,7 @@ class Program
                                     continue;
                                 }
                             }
-                            var typeKey = $"{type.Namespace}.{type.Name}";
+                            var typeKey = string.IsNullOrEmpty(type.Namespace) ? type.Name : $"{type.Namespace}.{type.Name}";
                             if (whitelist != null)
                             {
                                 // 存在白名单就必须白名单有
