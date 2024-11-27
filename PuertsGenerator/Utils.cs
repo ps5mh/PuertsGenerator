@@ -140,5 +140,47 @@ namespace PuertsGenerator
             catch { }
             return false;
         }
+
+        public static bool WithPointer(TypeReference type)
+        {
+            if (type.IsPointer) return true;
+            if (type.IsByReference)
+            {
+                return WithPointer((type as ByReferenceType).ElementType);
+            }
+            if (type.IsArray)
+            {
+                return WithPointer((type as ArrayType).ElementType);
+            }
+            // 加这个太慢了
+            /*if (IsDelegate(type))
+            {
+                if (type.IsGenericInstance)
+                {
+                    var genericInstanceType = (type as GenericInstanceType);
+                    foreach (var gt in genericInstanceType.GenericArguments)
+                    {
+                        if(WithPointer(gt))
+                        {
+                            return true;
+                        }
+                    }
+                }
+                try
+                {
+                    var typeDef = type.Resolve();
+                    if (typeDef != null)
+                    {
+                        var invoke = typeDef.Methods.First(m => m.Name == "Invoke");
+                        if (WithPointer(invoke.ReturnType) || invoke.Parameters.Any(pi => WithPointer(pi.ParameterType)))
+                        {
+                            return true;
+                        }
+                    }
+                }
+                catch { }
+            }*/
+            return false;
+        }
     }
 }

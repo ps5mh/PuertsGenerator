@@ -89,8 +89,6 @@ namespace PuertsGenerator
 
             public string[] DocumentLines;
 
-            public bool WithPointerType;
-
             public bool IsConstructor;
         }
 
@@ -264,11 +262,16 @@ namespace PuertsGenerator
                 return null;
             }
             AddRefedType(fieldDefinition.FieldType);
+            var fi = CollectInfo(fieldDefinition.FieldType);
+            if (fi.FullName.Contains('*') || IsDelegateWithPointer(fi))
+            {
+                return null;
+            }
             return new PropertyInfoCollected()
             {
                 Name = fieldDefinition.Name,
                 IsStatic = fieldDefinition.IsStatic,
-                PropertyType = CollectInfo(fieldDefinition.FieldType),
+                PropertyType = fi,
                 DocumentLines = ToLines(DocResolver.GetTsDocument(fieldDefinition)),
             };
         }
@@ -277,6 +280,11 @@ namespace PuertsGenerator
         {
             int idx = str.LastIndexOf('.');
             return (idx == -1) ? str : str.Substring(idx + 1);
+        }
+
+        static bool IsDelegateWithPointer(TypeInfoCollected ti)
+        {
+            return ti.IsDelegate && (ti.DelegateParmaters.Contains('*')  || ti.DelegateReturnType.Contains('*'));
         }
 
         static PropertyInfoCollected CollectInfo(PropertyDefinition propertyDefinition)
@@ -301,6 +309,11 @@ namespace PuertsGenerator
                 }
             }
             bool IsStatic = propertyDefinition.GetMethod != null ? propertyDefinition.GetMethod.IsStatic : propertyDefinition.SetMethod.IsStatic;
+            var pi = CollectInfo(propertyDefinition.PropertyType);
+            if (pi.FullName.Contains('*') || IsDelegateWithPointer(pi))
+            {
+                return null;
+            }
             AddRefedType(propertyDefinition.PropertyType);
             return new PropertyInfoCollected()
             {
@@ -309,7 +322,7 @@ namespace PuertsGenerator
                 AsMethod = !propertyDefinition.DeclaringType.IsInterface && !explicitInterfaceImplementation,
                 Getter = getterPublic,
                 Setter = setterPublic,
-                PropertyType = CollectInfo(propertyDefinition.PropertyType),
+                PropertyType = pi,
                 ContainsGenericParameter = containsGenericParameter,
                 DocumentLines = ToLines(DocResolver.GetTsDocument(propertyDefinition))
             };
@@ -324,24 +337,22 @@ namespace PuertsGenerator
                 parameters[parameters.Length - 1].IsLast = true;
             }
 
-            bool WithPointerType = false;
-
             if (!methodDefinition.IsConstructor)
             {
-                AddRefedType(methodDefinition.ReturnType);
-                if(methodDefinition.ReturnType.IsPointer)
+                if(Utils.WithPointer(methodDefinition.ReturnType))
                 {
-                    WithPointerType = true;
+                    return null;
                 }
+                AddRefedType(methodDefinition.ReturnType);
             }
 
             foreach (var parameterType in methodDefinition.Parameters.Select(p => p.ParameterType))
             {
-                AddRefedType(parameterType);
-                if (parameterType.IsPointer)
+                if (Utils.WithPointer(parameterType))
                 {
-                    WithPointerType = true;
+                    return null;
                 }
+                AddRefedType(parameterType);
             }
 
             return new MethodInfoCollected()
@@ -350,7 +361,6 @@ namespace PuertsGenerator
                 IsStatic = methodDefinition.IsStatic,
                 ReturnType = CollectInfo(methodDefinition.ReturnType),
                 Parameters = parameters,
-                WithPointerType = WithPointerType,
                 IsConstructor = methodDefinition.IsConstructor,
                 DocumentLines = ToLines(DocResolver.GetTsDocument(methodDefinition)),
             };
@@ -509,19 +519,20 @@ namespace PuertsGenerator
                 .Where(m => !m.ContainsGenericParameter)
                 .Where(m => !m.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"))
                 .Select(CollectInfo)
-                .Where(mi => !mi.WithPointerType)
+                .Where(mi => mi != null)
                 .ToArray();
 
             res.Properties = typeDefinition.Properties
-                .Where(p => !p.PropertyType.IsPointer)
+                .Where(p => !Utils.WithPointer(p.PropertyType))
                 .Where(p => !p.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"))
                 .DistinctBy(p => p.Name)
                 .Select(CollectInfo)
                 .Where(p => p != null)
                 .Where(pi => !pi.ContainsGenericParameter || !pi.IsStatic)
                 .Concat(typeDefinition.Fields
-                    .Where(f => !f.FieldType.IsPointer && (!f.ContainsGenericParameter || !f.IsStatic))
+                    .Where(f => !Utils.WithPointer(f.FieldType) && (!f.ContainsGenericParameter || !f.IsStatic))
                     .Where(f => !f.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"))
+                    .Where(f => !isCompilerGenerated(f.FieldType))
                     .Select(CollectInfo)
                 )
                 .Where(p => p != null)
@@ -626,6 +637,7 @@ namespace PuertsGenerator
             return new GenCodeData
             {
                 Namespaces = typesRefed.Where(t => !typesToGenLookup.Contains(t.FullName)).DistinctBy((t) => t.FullName).Select(CollectInfo).Concat(typeInfosToGen)
+                    .Where(ti => !IsDelegateWithPointer(ti))
                     .GroupBy(ti => ti.Namespace)
                     .Select(g => new NamespaceInfoCollected()
                     {
