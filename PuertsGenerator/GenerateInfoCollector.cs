@@ -382,7 +382,7 @@ namespace PuertsGenerator
                     TypeScriptName = Utils.GetTypeScriptName(typeReference),
                     DocumentLines = EmptyDocumentLines,
                     HasGenericParameters = typeReference.HasGenericParameters,
-                    GenericParameters = typeReference.GenericParameters.Select(gp =>new GenericParameterInfoCollected { Name = gp.Name.Replace('!', 'T')}).ToArray(),
+                    GenericParameters = typeReference.GenericParameters.Select(gp =>new GenericParameterInfoCollected { Name = gp.Name}).ToArray(),
                     DeclareKeyword = "class"
                 };
                 if (res.GenericParameters.Length > 0)

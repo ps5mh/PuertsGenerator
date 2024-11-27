@@ -102,7 +102,20 @@ namespace PuertsGenerator
             {
                 return GetRawType((type as ArrayType).ElementType);
             }
-            if (type.IsGenericInstance) return (type as GenericInstanceType).ElementType;
+            if (type.IsGenericInstance)
+            {
+                var et = (type as GenericInstanceType).ElementType;
+                try
+                {
+                    var etd = et.Resolve();
+                    if (etd != null)
+                    {
+                        return etd;
+                    }
+                }
+                catch { }
+                return et;
+            }
             return type;
         }
 
