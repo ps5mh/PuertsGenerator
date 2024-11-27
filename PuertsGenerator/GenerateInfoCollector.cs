@@ -508,17 +508,23 @@ namespace PuertsGenerator
                 .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)) && !m.HasGenericParameters)
                 .Concat(mustAdd)
                 .Where(m => !m.ContainsGenericParameter)
+                .Where(m => !m.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"))
                 .Select(CollectInfo)
                 .Where(mi => !mi.WithPointerType)
                 .ToArray();
 
             res.Properties = typeDefinition.Properties
                 .Where(p => !p.PropertyType.IsPointer)
+                .Where(p => !p.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"))
                 .DistinctBy(p => p.Name)
                 .Select(CollectInfo)
                 .Where(p => p != null)
                 .Where(pi => !pi.ContainsGenericParameter || !pi.IsStatic)
-                .Concat(typeDefinition.Fields.Where(f => !f.FieldType.IsPointer && (!f.ContainsGenericParameter || !f.IsStatic)).Select(CollectInfo))
+                .Concat(typeDefinition.Fields
+                    .Where(f => !f.FieldType.IsPointer && (!f.ContainsGenericParameter || !f.IsStatic))
+                    .Where(f => !f.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"))
+                    .Select(CollectInfo)
+                )
                 .Where(p => p != null)
                 .ToArray();
 
