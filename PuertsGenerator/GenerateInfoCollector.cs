@@ -273,11 +273,18 @@ namespace PuertsGenerator
             };
         }
 
+        static string trimByDot(string str)
+        {
+            int idx = str.LastIndexOf('.');
+            return (idx == -1) ? str : str.Substring(idx + 1);
+        }
+
         static PropertyInfoCollected CollectInfo(PropertyDefinition propertyDefinition)
         {
+            bool explicitInterfaceImplementation = propertyDefinition.Name.Contains('.');
             bool getterPublic = propertyDefinition.GetMethod != null ? propertyDefinition.GetMethod.IsPublic : false;
             bool setterPublic = propertyDefinition.SetMethod != null ? propertyDefinition.SetMethod.IsPublic : false;
-            if (!getterPublic && !setterPublic)
+            if (!getterPublic && !setterPublic && !explicitInterfaceImplementation)
             {
                 return null;
             }
@@ -297,9 +304,9 @@ namespace PuertsGenerator
             AddRefedType(propertyDefinition.PropertyType);
             return new PropertyInfoCollected()
             {
-                Name = propertyDefinition.Name,
+                Name = trimByDot(propertyDefinition.Name),
                 IsStatic = IsStatic,
-                AsMethod = !propertyDefinition.DeclaringType.IsInterface,
+                AsMethod = !propertyDefinition.DeclaringType.IsInterface && !explicitInterfaceImplementation,
                 Getter = getterPublic,
                 Setter = setterPublic,
                 PropertyType = CollectInfo(propertyDefinition.PropertyType),
@@ -518,6 +525,7 @@ namespace PuertsGenerator
                     .Select(CollectInfo)
                 )
                 .Where(p => p != null)
+                .DistinctBy(p => new { p.Name, p.IsStatic})
                 .ToArray();
 
             var interfaces = new List<TypeInfoCollected>();
