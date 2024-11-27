@@ -231,24 +231,6 @@ namespace PuertsGenerator
                 {
                     AddRefedType(gt);
                 }
-                AddRefedType(genericInstanceType.ElementType);
-                return;
-            }
-            if (typeReference.GenericParameters.Count > 0)
-            {
-                foreach (var gp in typeReference.GenericParameters)
-                {
-                    if (gp.Name.Contains('!'))
-                    {
-                        //AddRefedType(typeReference.GetElementType());
-                        try
-                        {
-                            var typeDef = typeReference.Resolve();
-                            if (typeDef != null) { AddRefedType(typeDef); }
-                        } catch { }
-                        return;
-                    }
-                }
             }
 
             if (typeReference.IsRequiredModifier)
