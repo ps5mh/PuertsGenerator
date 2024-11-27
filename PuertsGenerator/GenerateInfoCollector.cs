@@ -566,10 +566,6 @@ namespace PuertsGenerator
                     findSameNameButNotOverride(methodMap, debugType, td, result, true);
                 }
             }
-            if (debugType.FullName == "System.Array")
-            {
-
-            }
         }
 
         static void addInterfaceMethods(TypeDefinition itf, List<MethodDefinition> result, bool add)
