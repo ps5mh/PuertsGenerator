@@ -244,6 +244,16 @@ namespace PuertsGenerator
             {
                 return;
             }
+            if (typeReference.IsByReference)
+            {
+                AddRefedType((typeReference as ByReferenceType).ElementType);
+                return;
+            }
+            if (typeReference.IsArray)
+            {
+                AddRefedType((typeReference as ArrayType).ElementType);
+                return;
+            }
             typesRefed.Add(rawType);
         }
 
