@@ -576,38 +576,42 @@ namespace PuertsGenerator
             return (b == baseOrNot) ? true : isOverride(b, baseOrNot);
         }
 
-        static void findSameNameButNotOverride(Dictionary<string, IEnumerable<MethodDefinition>> methodMap, TypeDefinition debugType, TypeDefinition baseType, List<MethodDefinition> result, bool add)
+        static void findSameNameButNotOverride(Dictionary<string, IEnumerable<MethodDefinition>> methodMap, TypeDefinition debugType, TypeReference type, List<MethodDefinition> result, bool add)
         {
-            if (add)
+            try
             {
-                foreach (var m in baseType.Methods)
+                var typeDef = type.Resolve();
+
+                if (typeDef != null)
                 {
-                    if (m.ContainsGenericParameter)
+                    if (add)
                     {
-                        continue;
-                    }
-                    if (methodMap.TryGetValue(m.Name, out IEnumerable<MethodDefinition> methods))
-                    {
-                        bool found = false;
-                        foreach (var m2 in methods)
+                        foreach (var m in typeDef.Methods)
                         {
-                            if (isOverride(m2, m))
+                            if (m.ContainsGenericParameter)
                             {
-                                found = true;
+                                continue;
+                            }
+                            if (methodMap.TryGetValue(m.Name, out IEnumerable<MethodDefinition> methods))
+                            {
+                                bool found = false;
+                                foreach (var m2 in methods)
+                                {
+                                    if (isOverride(m2, m))
+                                    {
+                                        found = true;
+                                    }
+                                }
+                                if (!found) result.Add(m);
                             }
                         }
-                        if (!found) result.Add(m);
+                    }
+                    if (typeDef.BaseType != null)
+                    {
+                        findSameNameButNotOverride(methodMap, debugType, typeDef.BaseType, result, true);
                     }
                 }
-            }
-            if (baseType.BaseType != null)
-            {
-                var td = baseType.BaseType.Resolve();
-                if (td != null)
-                {
-                    findSameNameButNotOverride(methodMap, debugType, td, result, true);
-                }
-            }
+            } catch { }
         }
 
         static void addInterfaceMethods(TypeDefinition itf, List<MethodDefinition> result, bool add)
