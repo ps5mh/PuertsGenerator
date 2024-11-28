@@ -72,6 +72,15 @@ namespace {{ Name }} {
     {{/HasGenericParameters}}
     {{ /IsDelegate }}
     {{ /IsEnum }}
+    {{ #HasExtensionMethods }}
+    interface {{{ Name }}} {
+        {{ #ExtensionMethods }}
+        {{ #DocumentLines }}
+        {{.}}{{ /DocumentLines }}
+        {{Name}}({{ #Parameters }}${{Name}}: {{ #ParameterType }}{{{TypeScriptName}}}{{/ParameterType}}{{^IsLast}}, {{/IsLast}}{{/Parameters}}): {{ #ReturnType }}{{{TypeScriptName}}}{{/ReturnType}};
+        {{/ExtensionMethods}}
+    }
+    {{ /HasExtensionMethods}}
 
 {{/Types}}
 {{ ^IsGlobal }}

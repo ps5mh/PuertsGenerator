@@ -115,6 +115,10 @@ namespace PuertsGenerator
 
             public MethodInfoCollected[] Methods = EmptyMethodInfos;
 
+            public bool HasExtensionMethods = false;
+
+            public MethodInfoCollected[] ExtensionMethods = EmptyMethodInfos;
+
             public PropertyInfoCollected[] Properties = EmptyPropertyInfos;
 
             public bool IsEnum = false;
@@ -328,13 +332,24 @@ namespace PuertsGenerator
             };
         }
 
+        static List<MethodDefinition> ExtensionMethods = new List<MethodDefinition>();
+
         static MethodInfoCollected CollectInfo(MethodDefinition methodDefinition)
         {
-            if (((methodDefinition.ContainsGenericParameter && methodDefinition.IsStatic) || methodDefinition.HasGenericParameters))
+            return CollectInfo(methodDefinition, false);
+        }
+
+        static MethodInfoCollected CollectInfo(MethodDefinition methodDefinition, bool asExtensionMethod)
+        {
+            if (!asExtensionMethod && methodDefinition.IsStatic && methodDefinition.Parameters.Count > 0 && Utils.IsExtension(methodDefinition) && Utils.IsSupportedMethod(methodDefinition))
+            {
+                ExtensionMethods.Add(methodDefinition);
+            }
+            if (!asExtensionMethod && ((methodDefinition.ContainsGenericParameter && methodDefinition.IsStatic) || methodDefinition.HasGenericParameters))
             {
                 return null;
             }
-            var parameters = methodDefinition.Parameters.Select(CollectInfo).ToArray();
+            var parameters = methodDefinition.Parameters.Skip(asExtensionMethod ? 1 : 0).Select(CollectInfo).ToArray();
             if (parameters.Length > 0)
             {
                 parameters[0].IsFirst = true;
@@ -350,7 +365,7 @@ namespace PuertsGenerator
                 AddRefedType(methodDefinition.ReturnType);
             }
 
-            foreach (var parameterType in methodDefinition.Parameters.Select(p => p.ParameterType))
+            foreach (var parameterType in methodDefinition.Parameters.Skip(asExtensionMethod ? 1 : 0).Select(p => p.ParameterType))
             {
                 if (Utils.WithPointer(parameterType))
                 {
@@ -641,6 +656,22 @@ namespace PuertsGenerator
         {
             var typeInfosToGen = typesToGen.Distinct().Select(CollectInfo).ToArray(); // force referenced types found
             var typesToGenLookup = typesToGen.Select(t => t.FullName).ToHashSet();
+
+            var groupedExtensionMethods = ExtensionMethods.GroupBy(m => Utils.GetExtendedType(m)).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>());
+            foreach(var kv in groupedExtensionMethods)
+            {
+                //Console.WriteLine($"ExtensionMethod for: {kv.Key}, {kv.Value.Count()}");
+                try
+                {
+                    var td = kv.Key.Resolve();
+                    if (typesToGenLookup.Contains(td.FullName))
+                    {
+                        var info = CollectInfo(td);
+                        info.HasExtensionMethods = true;
+                        info.ExtensionMethods = kv.Value.Select(m => CollectInfo(m, true)).ToArray();
+                    }
+                } catch { }
+            }
 
             return new GenCodeData
             {

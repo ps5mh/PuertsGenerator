@@ -182,5 +182,89 @@ namespace PuertsGenerator
             }*/
             return false;
         }
+
+        public static bool IsExtension(MethodDefinition method)
+        {
+            return method.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.ExtensionAttribute");
+        }
+
+        static bool NotGenericParameterOrIsRef(TypeReference type, List<GenericParameter> refGenericParameters)
+        {
+            if (type.IsGenericInstance)
+            {
+                var genericInstanceType = type as GenericInstanceType;
+                foreach(var ga in genericInstanceType.GenericArguments)
+                {
+                    if (!NotGenericParameterOrIsRef(ga, refGenericParameters))
+                    {
+                        return false;
+                    }
+                }
+            }
+            else if (type.IsGenericParameter)
+            {
+                var genericParameter = type as GenericParameter;
+                if (genericParameter.Constraints.Count == 0)
+                {
+                    return false;
+                }
+
+                foreach(var constraint in genericParameter.Constraints)
+                {
+                    if (constraint.ConstraintType.IsValueType || constraint.ConstraintType.FullName == "System.ValueType" || constraint.ConstraintType.IsGenericInstance)
+                    {
+                        return false;
+                    }
+                }
+
+                refGenericParameters.Add(genericParameter);
+            }
+            return true;
+        }
+
+        public static bool IsSupportedMethod(MethodDefinition method)
+        {
+            if (!method.ContainsGenericParameter)
+            {
+                return true;
+            }
+            if (method.Parameters.Count > 0)
+            {
+                if (method.Parameters[0].ParameterType.IsByReference)
+                {
+                    return false;
+                }
+            }
+            List<GenericParameter> refGenericParameters = new List<GenericParameter>();
+            if (method.Parameters.Any(pi => !NotGenericParameterOrIsRef(pi.ParameterType, refGenericParameters)))
+            {
+                return false;
+            }
+
+            // if return is GenericParameter, must infer by argument
+            if (method.ReturnType.IsGenericParameter)
+            {
+                return refGenericParameters.Contains(method.ReturnType as GenericParameter);
+            }
+            return true;
+        }
+
+        public static TypeReference GetExtendedType(MethodDefinition method)
+        {
+            var type = method.Parameters[0].ParameterType;
+            if (type.IsGenericParameter)
+            {
+                var genericParameter = type as GenericParameter;
+                foreach (var constraint in genericParameter.Constraints)
+                {
+                    if (!constraint.ConstraintType.IsValueType)
+                    {
+                        return constraint.ConstraintType;
+                    }
+                }
+                return null;
+            }
+            return type;
+        }
     }
 }
