@@ -514,9 +514,10 @@ namespace PuertsGenerator
             }
 
             res.Methods = typeDefinition.Methods
-                .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)) && !m.HasGenericParameters)
+                .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)))
                 .Concat(mustAdd)
-                .Where(m => !m.ContainsGenericParameter)
+                // m.HasGenericParameters代表它自身有泛型参数，而如果它用了DeclaringType的泛型参数那么ContainsGenericParameter也为true
+                .Where(m => (!m.ContainsGenericParameter || !m.IsStatic) && !m.HasGenericParameters)
                 .Where(m => !m.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"))
                 .Select(CollectInfo)
                 .Where(mi => mi != null)
