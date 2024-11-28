@@ -564,6 +564,10 @@ namespace PuertsGenerator
             {
                 foreach (var m in baseType.Methods)
                 {
+                    if (m.ContainsGenericParameter)
+                    {
+                        continue;
+                    }
                     if (methodMap.TryGetValue(m.Name, out IEnumerable<MethodDefinition> methods))
                     {
                         bool found = false;
