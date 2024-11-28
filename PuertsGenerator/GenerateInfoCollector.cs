@@ -664,7 +664,7 @@ namespace PuertsGenerator
                 try
                 {
                     var td = kv.Key.Resolve();
-                    if (typesToGenLookup.Contains(td.FullName))
+                    if (!td.IsEnum && typesToGenLookup.Contains(td.FullName))
                     {
                         var info = CollectInfo(td);
                         info.HasExtensionMethods = true;
