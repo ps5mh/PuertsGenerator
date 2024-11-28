@@ -655,18 +655,24 @@ namespace PuertsGenerator
         internal static GenCodeData Collect(IEnumerable<TypeDefinition> typesToGen)
         {
             var typeInfosToGen = typesToGen.Distinct().Select(CollectInfo).ToArray(); // force referenced types found
-            var typesToGenLookup = typesToGen.Select(t => t.FullName).ToHashSet();
+            var typesToGenLookup = typesToGen.ToDictionary(t => t.FullName);
 
-            var groupedExtensionMethods = ExtensionMethods.GroupBy(m => Utils.GetExtendedType(m)).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>());
+            var groupedExtensionMethods = ExtensionMethods.GroupBy(m => {
+                try
+                {
+                    var td = Utils.GetExtendedType(m).Resolve();
+                    return typesToGenLookup[td.FullName];
+                }
+                catch { return null; }
+                }).Where(g => g.Key != null).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>());
             foreach(var kv in groupedExtensionMethods)
             {
                 //Console.WriteLine($"ExtensionMethod for: {kv.Key}, {kv.Value.Count()}");
                 try
                 {
-                    var td = kv.Key.Resolve();
-                    if (!td.IsEnum && typesToGenLookup.Contains(td.FullName))
+                    if (kv.Key != null && !kv.Key.IsEnum)
                     {
-                        var info = CollectInfo(td);
+                        var info = CollectInfo(kv.Key);
                         info.HasExtensionMethods = true;
                         info.ExtensionMethods = kv.Value.Select(m => CollectInfo(m, true)).ToArray();
                     }
@@ -675,7 +681,7 @@ namespace PuertsGenerator
 
             return new GenCodeData
             {
-                Namespaces = typesRefed.Where(t => !typesToGenLookup.Contains(t.FullName)).DistinctBy((t) => t.FullName).Select(CollectInfo).Concat(typeInfosToGen)
+                Namespaces = typesRefed.Where(t => !typesToGenLookup.ContainsKey(t.FullName)).DistinctBy((t) => t.FullName).Select(CollectInfo).Concat(typeInfosToGen)
                     .Where(ti => !IsDelegateWithPointer(ti))
                     .GroupBy(ti => ti.Namespace)
                     .Select(g => new NamespaceInfoCollected()
