@@ -17,37 +17,37 @@ namespace PuertsGenerator
         {
             TypeSystem typesystem = type.Module.TypeSystem;
 
-            if (type == typesystem.Int32)
+            if (type.FullName == typesystem.Int32.FullName)
                 return "number";
-            if (type == typesystem.UInt32)
+            if (type.FullName == typesystem.UInt32.FullName)
                 return "number";
-            else if (type == typesystem.Int16)
+            else if (type.FullName == typesystem.Int16.FullName)
                 return "number";
-            else if (type == typesystem.Byte)
+            else if (type.FullName == typesystem.Byte.FullName)
                 return "number";
-            else if (type == typesystem.SByte)
+            else if (type.FullName == typesystem.SByte.FullName)
                 return "number";
-            else if (type == typesystem.Char)
+            else if (type.FullName == typesystem.Char.FullName)
                 return "number";
-            else if (type == typesystem.UInt16)
+            else if (type.FullName == typesystem.UInt16.FullName)
                 return "number";
-            else if (type == typesystem.Boolean)
+            else if (type.FullName == typesystem.Boolean.FullName)
                 return "boolean";
-            else if (type == typesystem.Int64)
+            else if (type.FullName == typesystem.Int64.FullName)
                 return "bigint";
-            else if (type == typesystem.UInt64)
+            else if (type.FullName == typesystem.UInt64.FullName)
                 return "bigint";
-            else if (type == typesystem.Single)
+            else if (type.FullName == typesystem.Single.FullName)
                 return "number";
-            else if (type == typesystem.Double)
+            else if (type.FullName == typesystem.Double.FullName)
                 return "number";
-            else if (type == typesystem.String)
+            else if (type.FullName == typesystem.String.FullName)
                 return "string";
-            else if (type == typesystem.Void)
+            else if (type.FullName == typesystem.Void.FullName)
                 return "void";
             else if (type.FullName == "Puerts.ArrayBuffer")
                 return "ArrayBuffer";
-            else if (type == typesystem.Object)
+            else if (type.FullName == typesystem.Object.FullName)
                 return "any";
             else if (type.FullName == "System.Delegate" || type.FullName == "Puerts.GenericDelegate")
                 return "Function";
