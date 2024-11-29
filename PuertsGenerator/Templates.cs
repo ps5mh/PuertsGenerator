@@ -35,7 +35,7 @@ namespace {{ Name }} {
     {{ /IsEnum }}
     {{ ^IsEnum }}
     {{ ^IsDelegate }}
-    {{DeclareKeyword}} {{{ Name }}}{{#HasGenericParameters}}<{{#GenericParameters}}{{Name}}{{^IsLast}}, {{/IsLast}}{{/GenericParameters}}>{{/HasGenericParameters}}{{ #BaseType }} extends {{{FullName}}}{{/BaseType}}{{#WithImplements}} {{ImplementsKeyword}} {{/WithImplements}}{{{Implements}}} {
+    {{DeclareKeyword}} {{{ Name }}}{{#HasGenericParameters}}<{{#GenericParameters}}{{Name}}{{^IsLast}}, {{/IsLast}}{{/GenericParameters}}>{{/HasGenericParameters}}{{ #Extends }} extends {{{ExtendsTypeName}}}{{/Extends}}{{#WithImplements}} {{ImplementsKeyword}} {{/WithImplements}}{{{Implements}}} {
         {{^IsInterface}}protected [__keep_incompatibility]: never;{{/IsInterface}}
 
         {{ #Properties }}

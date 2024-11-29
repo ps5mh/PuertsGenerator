@@ -121,6 +121,10 @@ namespace PuertsGenerator
 
             public TypeInfoCollected BaseType;
 
+            public bool Extends = false;
+
+            public string ExtendsTypeName;
+
             public MethodInfoCollected[] Methods = EmptyMethodInfos;
 
             public bool HasExtensionMethods = false;
@@ -521,6 +525,8 @@ namespace PuertsGenerator
             {
                 AddRefedType(type.BaseType);
                 info.BaseType = CollectInfo(type.BaseType);
+                info.Extends = true;
+                info.ExtendsTypeName = (type.BaseType.IsPrimitive || type.BaseType.FullName == "System.Object") ? type.BaseType.FullName : info.BaseType.TypeScriptName;
             }
         }
 
