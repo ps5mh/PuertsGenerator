@@ -8,7 +8,7 @@ namespace PuertsGenerator
 {
     internal static class Templates
     {
-        public const string IndexDTs = @"{{<ParameterList}}{{ #Parameters }}${{Name}}: {{ #ParameterType }}{{{TypeScriptName}}}{{/ParameterType}}{{^IsLast}}, {{/IsLast}}{{/Parameters}}{{/ParameterList}}
+        public const string IndexDTs = @"{{<ParameterList}}{{ #Parameters }}{{ #IsParams }}...{{ /IsParams }}${{Name}}{{ #IsOptional }}?{{ /IsOptional }}: {{{ParamerterTypeScriptName}}}{{^IsLast}}, {{/IsLast}}{{/Parameters}}{{/ParameterList}}
 declare namespace CS {
     //keep type incompatibility / 此属性保持类型不兼容
     const __keep_incompatibility: unique symbol;
@@ -77,7 +77,7 @@ namespace {{ Name }} {
         {{ #ExtensionMethods }}
         {{ #DocumentLines }}
         {{.}}{{ /DocumentLines }}
-        {{Name}}({{ #Parameters }}${{Name}}: {{ #ParameterType }}{{{TypeScriptName}}}{{/ParameterType}}{{^IsLast}}, {{/IsLast}}{{/Parameters}}): {{ #ReturnType }}{{{TypeScriptName}}}{{/ReturnType}};
+        {{Name}}({{ #Parameters }}{{ #IsParams }}...{{ /IsParams }}${{Name}}{{ #IsOptional }}?{{ /IsOptional }}: {{{ParamerterTypeScriptName}}}{{^IsLast}}, {{/IsLast}}{{/Parameters}}): {{ #ReturnType }}{{{TypeScriptName}}}{{/ReturnType}};
         {{/ExtensionMethods}}
     }
     {{ /HasExtensionMethods}}

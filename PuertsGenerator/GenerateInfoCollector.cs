@@ -72,6 +72,12 @@ namespace PuertsGenerator
 
             public TypeInfoCollected ParameterType;
 
+            public string ParamerterTypeScriptName; // 因为TypeInfoCollected是根据类型索引的，可能params int[]和普通的int[]是共享一个，所以要另外搞个类型
+
+            public bool IsParams = false;
+
+            public bool IsOptional = false;
+
             public bool IsFirst = false;
 
             public bool IsLast = false;
@@ -172,10 +178,14 @@ namespace PuertsGenerator
 
         static ParameterInfoCollected CollectInfo(ParameterDefinition parameterDefinition)
         {
+            var isParams = parameterDefinition.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ParamArrayAttribute");
             return new ParameterInfoCollected()
             {
                 Name = parameterDefinition.Name,
                 ParameterType = CollectInfo(parameterDefinition.ParameterType),
+                IsParams = isParams,
+                IsOptional = parameterDefinition.IsOptional,
+                ParamerterTypeScriptName = Utils.GetTypeScriptName(parameterDefinition.ParameterType.IsRequiredModifier ? parameterDefinition.ParameterType.GetElementType() : parameterDefinition.ParameterType, isParams),
             };
         }
 
