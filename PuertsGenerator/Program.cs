@@ -31,7 +31,7 @@ class Program
     static void Main(string[] args)
     {
         string jsonString = File.ReadAllText(args[0]);
-        Dictionary<string, AssemblyConfigure> conf = JsonSerializer.Deserialize<Dictionary<string, AssemblyConfigure>>(jsonString);
+        GenerateConfigure conf = JsonSerializer.Deserialize<GenerateConfigure>(jsonString);
 
         var output = args[1];
 
@@ -84,7 +84,7 @@ class Program
                     var assembly = AssemblyDefinition.ReadAssembly(arg);
                     stopwatch.Stop();
                     Console.WriteLine($"Read {assembly.Name.Name}({arg}) using: {stopwatch.ElapsedMilliseconds} ms");
-                    AssemblyConfigure assemblyConfigure = conf[assembly.Name.Name];
+                    AssemblyConfigure assemblyConfigure = conf.Assemblys[assembly.Name.Name];
                     HashSet<string> whitelist = null;
                     HashSet<string> blacklist = null;
                     if (assemblyConfigure != null && assemblyConfigure.Whitelist != null)
@@ -145,6 +145,10 @@ class Program
                 catch { }
             }
 
+            if (conf.EnumGenerateHooks != null)
+            {
+                GenerateInfoCollector.enumGenerateHooks = conf.EnumGenerateHooks;
+            }
             var data = GenerateInfoCollector.Collect(typesToGen);
             stopwatch.Stop();
             Console.WriteLine($"Data Prepare using: {stopwatch.ElapsedMilliseconds} ms, type.Count = {typesToGen.Count}");

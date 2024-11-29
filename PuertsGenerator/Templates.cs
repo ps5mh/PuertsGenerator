@@ -31,7 +31,7 @@ namespace {{ Name }} {
     {{.}}{{ /DocumentLines }}
     // {{{ModuleFileName}}}
     {{ #IsEnum }}
-    {{DeclareKeyword}} {{{ Name }}} { {{{EnumKeyValues}}} }
+    {{DeclareKeyword}} {{{ Name }}} {{{EnumKeyValues}}}
     {{ /IsEnum }}
     {{ ^IsEnum }}
     {{ ^IsDelegate }}

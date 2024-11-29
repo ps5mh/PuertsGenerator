@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Mono.Cecil;
 using Mono.Cecil.Rocks;
+using System.Text.RegularExpressions;
+using Nustache.Core;
 
 #nullable disable
 
@@ -444,6 +446,8 @@ namespace PuertsGenerator
             return res;
         }
 
+        internal static GenerateHookConfigure[] enumGenerateHooks = new GenerateHookConfigure[0];
+
         static void fillBaseInfo(TypeInfoCollected info, TypeDefinition type)
         {
             if (type.IsNested)
@@ -469,8 +473,25 @@ namespace PuertsGenerator
             info.IsEnum = type.IsEnum;
             if (info.IsEnum)
             {
-                info.EnumKeyValues = string.Join(", ", type.Fields.Where(f => f.Name != "value__" && f.IsPublic).Select(f => f.Name + " = " + f.Constant));
-                info.DeclareKeyword = "enum";
+                foreach (var hook in enumGenerateHooks)
+                {
+                    if (Regex.IsMatch(info.FullName, hook.Pattern))
+                    {
+                        info.DeclareKeyword = hook.DeclareKeyword;
+                        info.EnumKeyValues = Render.StringToString(hook.BodyTemplate, info);
+                        info.Proceed = true;
+                    }
+                }
+                //if (info.Namespace.StartsWith("ResData") || info.Namespace.StartsWith("CSProtocol"))
+                //{
+                //    info.EnumKeyValues = " = Tdr.Macro;";
+                //    info.DeclareKeyword = "type";
+                //}
+                if (!info.Proceed)
+                {
+                    info.EnumKeyValues = "{ " + string.Join(", ", type.Fields.Where(f => f.Name != "value__" && f.IsPublic).Select(f => f.Name + " = " + f.Constant)) + " }";
+                    info.DeclareKeyword = "enum";
+                }
                 info.Proceed = true;
                 return;
             }
