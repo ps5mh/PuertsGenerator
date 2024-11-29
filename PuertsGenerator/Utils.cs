@@ -80,7 +80,14 @@ namespace PuertsGenerator
                 {
                     if (parts[1][pos] < '0' || parts[1][pos] > '9') break;
                 }
-                return parts[0].Replace('/', '.') + '$' + parts[1].Substring(0, pos) + "<" + string.Join(", ", argTypenames) + ">";
+                var clsName = parts[0] + '$' + parts[1].Substring(0, pos);
+                if (type.IsNested)
+                {
+                    //Dictionary`2/Enumerator<TKey,TValue>
+                    clsName += "." + fullName.Split('/')[1].Split('<')[0];
+                }
+
+                return clsName + "<" + string.Join(", ", argTypenames) + ">";
             }
             else if (type.FullName == null)
             {
