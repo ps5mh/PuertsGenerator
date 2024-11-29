@@ -596,6 +596,19 @@ namespace PuertsGenerator
                 {
                     if (addTo != typeDef)
                     {
+                        var genericInstanceType = type as GenericInstanceType;
+                        var findGenericArgument = (GenericParameter gp) =>
+                        {
+                            for (var i = 0; i < typeDef.GenericParameters.Count; ++i)
+                            {
+                                if (typeDef.GenericParameters[i] == gp)
+                                {
+                                    return genericInstanceType.GenericArguments[i];
+                                }
+                            }
+                            return null;
+                        };
+
                         foreach (var m in typeDef.Methods)
                         {
                             if (m.HasGenericParameters)
@@ -606,19 +619,6 @@ namespace PuertsGenerator
                             {
                                 if (m.IsStatic && m.IsPublic && !m.IsConstructor && !m.IsSpecialName && type.IsGenericInstance)
                                 {
-                                    var genericInstanceType = type as GenericInstanceType;
-                                    var findGenericArgument = (GenericParameter gp) =>
-                                    {
-                                        for (var i = 0; i < typeDef.GenericParameters.Count; ++i)
-                                        {
-                                            if (typeDef.GenericParameters[i] == gp)
-                                            {
-                                                return genericInstanceType.GenericArguments[i];
-                                            }
-                                        }
-                                        return null;
-                                    };
-
                                     var returnType = m.ReturnType.IsGenericParameter ? findGenericArgument(m.ReturnType as GenericParameter) : m.ReturnType;
                                     if (returnType != null)
                                     {
@@ -655,6 +655,32 @@ namespace PuertsGenerator
                                     }
                                 }
                                 if (!found) result.Add(m);
+                            }
+                        }
+
+                        foreach (var pd in typeDef.Properties)
+                        {
+                            bool isStatic = pd.GetMethod != null ? pd.GetMethod.IsStatic : (pd.SetMethod != null ? pd.SetMethod.IsStatic: false);
+                            if (isStatic && pd.PropertyType.IsGenericParameter)
+                            {
+                                
+                                var propertyType = findGenericArgument(pd.PropertyType as GenericParameter);
+                                if (propertyType != null)
+                                {
+                                    var addPropery = new PropertyDefinition(pd.Name, pd.Attributes, propertyType);
+                                    if (pd.GetMethod != null)
+                                    {
+                                        addPropery.GetMethod = new MethodDefinition(pd.GetMethod.Name, pd.GetMethod.Attributes, propertyType);
+                                        addTo.Methods.Add(addPropery.GetMethod);
+                                    }
+                                    if (pd.SetMethod != null)
+                                    {
+                                        addPropery.SetMethod = new MethodDefinition(pd.SetMethod.Name, pd.SetMethod.Attributes, pd.SetMethod.ReturnType);
+                                        addPropery.SetMethod.Parameters.Add(new ParameterDefinition(pd.SetMethod.Parameters[0].Name, pd.SetMethod.Parameters[0].Attributes, propertyType));
+                                        addTo.Methods.Add(addPropery.SetMethod);
+                                    }
+                                    addTo.Properties.Add(addPropery);
+                                }
                             }
                         }
                     }
