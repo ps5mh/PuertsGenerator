@@ -38,6 +38,10 @@ namespace {{ Name }} {
     {{DeclareKeyword}} {{{ Name }}}{{#HasGenericParameters}}<{{#GenericParameters}}{{Name}}{{^IsLast}}, {{/IsLast}}{{/GenericParameters}}>{{/HasGenericParameters}}{{ #Extends }} extends {{{ExtendsTypeName}}}{{/Extends}}{{#WithImplements}} {{ImplementsKeyword}} {{/WithImplements}}{{{Implements}}} {
         {{^IsInterface}}protected [__keep_incompatibility]: never;{{/IsInterface}}
 
+        {{ #IsValueType }}
+        public constructor();
+        {{ /IsValueType }}
+
         {{ #Properties }}
         {{ #DocumentLines }}
         {{.}}{{ /DocumentLines }}
