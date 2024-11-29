@@ -530,6 +530,23 @@ namespace PuertsGenerator
             }
         }
 
+        static bool isIndexer(PropertyDefinition property)
+        {
+            if (property.Name != "Item")
+            {
+                return false;
+            }
+            if (property.GetMethod != null && property.GetMethod.Parameters.Count == 0)
+            {
+                return false;
+            }
+            if (property.SetMethod != null && property.SetMethod.Parameters.Count == 1)
+            {
+                return false;
+            }
+            return true;
+        }
+
         static TypeInfoCollected CollectInfo(TypeDefinition typeDefinition)
         {
             TypeInfoCollected res = CollectInfo(typeDefinition as TypeReference);
@@ -554,6 +571,10 @@ namespace PuertsGenerator
             HashSet<string> names = new HashSet<string>();
             foreach (var p in typeDefinition.Properties)
             {
+                if (isIndexer(p))
+                {
+                    continue;
+                }
                 if (p.GetMethod != null)
                 {
                     names.Add(p.GetMethod.Name);
@@ -577,6 +598,7 @@ namespace PuertsGenerator
                 .Where(p => !Utils.WithPointer(p.PropertyType))
                 .Where(p => !p.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"))
                 .DistinctBy(p => p.Name)
+                .Where(p => !isIndexer(p))
                 .Select(CollectInfo)
                 .Where(p => p != null)
                 .Where(pi => !pi.ContainsGenericParameter || !pi.IsStatic)
