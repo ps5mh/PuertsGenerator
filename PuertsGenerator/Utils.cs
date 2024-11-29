@@ -188,7 +188,7 @@ namespace PuertsGenerator
             return method.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.ExtensionAttribute");
         }
 
-        static bool NotGenericParameterOrIsRef(TypeReference type, List<GenericParameter> refGenericParameters)
+        public static bool NotGenericParameterOrIsRef(TypeReference type, List<GenericParameter> refGenericParameters)
         {
             if (type.IsGenericInstance)
             {
@@ -235,17 +235,26 @@ namespace PuertsGenerator
                     return false;
                 }
             }
-            List<GenericParameter> refGenericParameters = new List<GenericParameter>();
-            if (method.Parameters.Any(pi => !NotGenericParameterOrIsRef(pi.ParameterType, refGenericParameters)))
+            List<GenericParameter> argRefedGenericParameters = new List<GenericParameter>();
+            if (method.Parameters.Any(pi => !NotGenericParameterOrIsRef(pi.ParameterType, argRefedGenericParameters)))
             {
                 return false;
             }
 
             // if return is GenericParameter, must infer by argument
-            if (method.ReturnType.IsGenericParameter)
+            List<GenericParameter> retRefedGenericParameters = new List<GenericParameter>();
+            if ( !NotGenericParameterOrIsRef(method.ReturnType, retRefedGenericParameters))
             {
-                return refGenericParameters.Contains(method.ReturnType as GenericParameter);
+                return false;
             }
+            foreach (var rrgp in retRefedGenericParameters)
+            {
+                if (!argRefedGenericParameters.Contains(rrgp))
+                {
+                    return false;
+                }
+            }
+
             return true;
         }
 
