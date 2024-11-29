@@ -482,11 +482,6 @@ namespace PuertsGenerator
                         info.Proceed = true;
                     }
                 }
-                //if (info.Namespace.StartsWith("ResData") || info.Namespace.StartsWith("CSProtocol"))
-                //{
-                //    info.EnumKeyValues = " = Tdr.Macro;";
-                //    info.DeclareKeyword = "type";
-                //}
                 if (!info.Proceed)
                 {
                     info.EnumKeyValues = "{ " + string.Join(", ", type.Fields.Where(f => f.Name != "value__" && f.IsPublic).Select(f => f.Name + " = " + f.Constant)) + " }";
