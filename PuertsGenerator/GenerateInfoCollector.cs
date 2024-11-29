@@ -517,7 +517,7 @@ namespace PuertsGenerator
             {
                 addInterfaceMethods(typeDefinition, mustAdd, false);
             }
-            findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).Concat(mustAdd).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition, typeDefinition, mustAdd, false);
+            findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).Concat(mustAdd).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition, typeDefinition, mustAdd);
 
             HashSet<string> names = new HashSet<string>();
             foreach (var p in typeDefinition.Properties)
@@ -576,7 +576,7 @@ namespace PuertsGenerator
             return (b == baseOrNot) ? true : isOverride(b, baseOrNot);
         }
 
-        static void findSameNameButNotOverride(Dictionary<string, IEnumerable<MethodDefinition>> methodMap, TypeDefinition debugType, TypeReference type, List<MethodDefinition> result, bool add)
+        static void findSameNameButNotOverride(Dictionary<string, IEnumerable<MethodDefinition>> methodMap, TypeDefinition addTo, TypeReference type, List<MethodDefinition> result)
         {
             try
             {
@@ -584,12 +584,54 @@ namespace PuertsGenerator
 
                 if (typeDef != null)
                 {
-                    if (add)
+                    if (addTo != typeDef)
                     {
                         foreach (var m in typeDef.Methods)
                         {
+                            if (m.HasGenericParameters)
+                            {
+                                continue;
+                            }
                             if (m.ContainsGenericParameter)
                             {
+                                if (m.IsStatic && m.IsPublic && !m.IsConstructor && !m.IsSpecialName && type.IsGenericInstance)
+                                {
+                                    var genericInstanceType = type as GenericInstanceType;
+                                    var findGenericArgument = (GenericParameter gp) =>
+                                    {
+                                        for (var i = 0; i < typeDef.GenericParameters.Count; ++i)
+                                        {
+                                            if (typeDef.GenericParameters[i] == gp)
+                                            {
+                                                return genericInstanceType.GenericArguments[i];
+                                            }
+                                        }
+                                        return null;
+                                    };
+
+                                    var returnType = m.ReturnType.IsGenericParameter ? findGenericArgument(m.ReturnType as GenericParameter) : m.ReturnType;
+                                    if (returnType != null)
+                                    {
+                                        var addMethod = new MethodDefinition(m.Name, m.Attributes, returnType);
+                                        foreach(var pd in m.Parameters)
+                                        {
+                                            var parameterType = pd.ParameterType.IsGenericParameter ? findGenericArgument(pd.ParameterType as GenericParameter) : pd.ParameterType;
+                                            if (parameterType != null)
+                                            {
+                                                addMethod.Parameters.Add(new ParameterDefinition(pd.Name, pd.Attributes, parameterType));
+                                            }
+                                            else
+                                            {
+                                                addMethod = null;
+                                                break;
+                                            }
+                                        }
+                                        if (addMethod != null)
+                                        {
+                                            addTo.Methods.Add(addMethod);
+                                        }
+                                    }
+                                }
                                 continue;
                             }
                             if (methodMap.TryGetValue(m.Name, out IEnumerable<MethodDefinition> methods))
@@ -608,7 +650,7 @@ namespace PuertsGenerator
                     }
                     if (typeDef.BaseType != null)
                     {
-                        findSameNameButNotOverride(methodMap, debugType, typeDef.BaseType, result, true);
+                        findSameNameButNotOverride(methodMap, addTo, typeDef.BaseType, result);
                     }
                 }
             } catch { }
