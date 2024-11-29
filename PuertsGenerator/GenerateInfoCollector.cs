@@ -118,6 +118,7 @@ namespace PuertsGenerator
             public string FullName;
             public string TypeScriptName;
             public string ModuleFileName;
+            public string AssemblyName;
 
             public TypeInfoCollected BaseType;
 
@@ -423,6 +424,7 @@ namespace PuertsGenerator
                     Namespace = typeReference.Namespace,
                     FullName = typeReference.FullName.Replace('`', '$').Replace('/', '.'),
                     ModuleFileName = typeReference.Module.FileName,
+                    AssemblyName = typeReference.Module.Assembly.Name.Name,
                     TypeScriptName = Utils.GetTypeScriptName(typeReference),
                     DocumentLines = EmptyDocumentLines,
                     HasGenericParameters = typeReference.HasGenericParameters,

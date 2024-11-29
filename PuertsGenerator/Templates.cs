@@ -29,7 +29,7 @@ namespace {{ Name }} {
 {{ #Types }}
     {{ #DocumentLines }}
     {{.}}{{ /DocumentLines }}
-    // {{{ModuleFileName}}}
+    // {{{ModuleFileName}}} {{AssemblyName}} {{Namespace}}
     {{ #IsEnum }}
     {{DeclareKeyword}} {{{ Name }}} {{{EnumKeyValues}}}
     {{ /IsEnum }}
