@@ -534,7 +534,17 @@ namespace PuertsGenerator
         {
             if (property.Name != "Item")
             {
-                return false;
+                if (property.Name.Contains('.'))
+                {
+                    if (!property.Name.EndsWith(".Item"))
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    return false;
+                }
             }
             if (property.GetMethod != null && property.GetMethod.Parameters.Count == 0)
             {
