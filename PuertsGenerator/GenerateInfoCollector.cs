@@ -600,7 +600,8 @@ namespace PuertsGenerator
 
             var methods = typeDefinition.Methods
                 .Where(m => !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)))
-                .Where(m => !m.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"));
+                .Where(m => !m.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"))
+                .Where(m => !isCompilerGenerated(m));
 
             var publicMethods = methods.Where(m => m.IsPublic);
 
