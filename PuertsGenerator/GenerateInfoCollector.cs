@@ -658,7 +658,7 @@ namespace PuertsGenerator
                 {
                     if (addTo != typeDef)
                     {
-                        var genericInstanceType = type as GenericInstanceType;
+                        var genericInstanceType = addTo.BaseType as GenericInstanceType;
                         var findGenericArgument = (GenericParameter gp) =>
                         {
                             for (var i = 0; i < typeDef.GenericParameters.Count; ++i)
