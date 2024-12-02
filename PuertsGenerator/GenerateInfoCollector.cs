@@ -365,6 +365,11 @@ namespace PuertsGenerator
                 return null;
             }
 
+            if (methodDefinition.IsPrivate && isCompilerGenerated(methodDefinition))
+            {
+                return null;
+            }
+
             if (!asExtensionMethod && methodDefinition.IsStatic && methodDefinition.Parameters.Count > 0 && Utils.IsExtension(methodDefinition) && Utils.IsSupportedMethod(methodDefinition))
             {
                 ExtensionMethods.Add(methodDefinition);
@@ -600,8 +605,7 @@ namespace PuertsGenerator
 
             var methods = typeDefinition.Methods
                 .Where(m => !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)))
-                .Where(m => !m.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"))
-                .Where(m => !isCompilerGenerated(m));
+                .Where(m => !m.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"));
 
             var publicMethods = methods.Where(m => m.IsPublic);
 
