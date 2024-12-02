@@ -359,6 +359,12 @@ namespace PuertsGenerator
 
         static MethodInfoCollected CollectInfo(MethodDefinition methodDefinition, bool asExtensionMethod)
         {
+            bool explicitInterfaceImplementation = methodDefinition.Name.Contains('.');
+            if (!methodDefinition.IsPublic && !explicitInterfaceImplementation)
+            {
+                return null;
+            }
+
             if (!asExtensionMethod && methodDefinition.IsStatic && methodDefinition.Parameters.Count > 0 && Utils.IsExtension(methodDefinition) && Utils.IsSupportedMethod(methodDefinition))
             {
                 ExtensionMethods.Add(methodDefinition);
@@ -394,7 +400,7 @@ namespace PuertsGenerator
 
             return new MethodInfoCollected()
             {
-                Name = methodDefinition.IsConstructor ? "constructor" : methodDefinition.Name,
+                Name = trimByDot(methodDefinition.IsConstructor ? "constructor" : methodDefinition.Name),
                 IsStatic = methodDefinition.IsStatic,
                 ReturnType = CollectInfo(methodDefinition.ReturnType),
                 Parameters = parameters,
@@ -593,20 +599,22 @@ namespace PuertsGenerator
             }
 
             var methods = typeDefinition.Methods
-                .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)))
+                .Where(m => !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)))
                 .Where(m => !m.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"));
+
+            var publicMethods = methods.Where(m => m.IsPublic);
 
             List<MethodDefinition> mustAdd = new List<MethodDefinition>();
             if (typeDefinition.IsAbstract)
             {
-                addInterfaceMethods(methods
+                addInterfaceMethods(publicMethods
                     .Where(m => !m.IsConstructor && !m.HasGenericParameters)
                     .GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition.IsInterface, typeDefinition, mustAdd, false);
             }
 
             if (!typeDefinition.IsInterface)
             {
-                findSameNameButNotOverride(methods
+                findSameNameButNotOverride(publicMethods
                     .Where(m => !m.IsConstructor && !m.HasGenericParameters)
                     .Concat(mustAdd).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition, typeDefinition, mustAdd);
             }
