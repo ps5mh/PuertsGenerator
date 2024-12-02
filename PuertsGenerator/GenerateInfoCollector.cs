@@ -575,13 +575,6 @@ namespace PuertsGenerator
 
             res.DocumentLines = ToLines(DocResolver.GetTsDocument(typeDefinition));
 
-            List<MethodDefinition> mustAdd = new List<MethodDefinition>();
-            if (typeDefinition.IsAbstract)
-            {
-                addInterfaceMethods(typeDefinition, mustAdd, false);
-            }
-            findSameNameButNotOverride(typeDefinition.Methods.Where(m => !m.IsConstructor).Concat(mustAdd).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition, typeDefinition, mustAdd);
-
             HashSet<string> names = new HashSet<string>();
             foreach (var p in typeDefinition.Properties)
             {
@@ -599,11 +592,22 @@ namespace PuertsGenerator
                 }
             }
 
-            res.Methods = typeDefinition.Methods
+            var methods = typeDefinition.Methods
                 .Where(m => m.IsPublic && !(m.IsStatic && m.IsConstructor) && (!m.IsSpecialName || !names.Contains(m.Name)))
-                .Concat(mustAdd)
+                .Where(m => !m.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"));
+
+            List<MethodDefinition> mustAdd = new List<MethodDefinition>();
+            if (typeDefinition.IsAbstract)
+            {
+                addInterfaceMethods(typeDefinition, mustAdd, false);
+            }
+            findSameNameButNotOverride(methods
+                .Where(m => !m.IsConstructor && !m.HasGenericParameters)
+                .Concat(mustAdd).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition, typeDefinition, mustAdd);
+
+            res.Methods = methods
+                .Concat(mustAdd.Where(m => !m.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute")))
                 // m.HasGenericParameters代表它自身有泛型参数，而如果它用了DeclaringType的泛型参数那么ContainsGenericParameter也为true
-                .Where(m => !m.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute"))
                 .Select(CollectInfo)
                 .Where(mi => mi != null)
                 .ToArray();
