@@ -599,11 +599,17 @@ namespace PuertsGenerator
             List<MethodDefinition> mustAdd = new List<MethodDefinition>();
             if (typeDefinition.IsAbstract)
             {
-                addInterfaceMethods(typeDefinition, mustAdd, false);
+                addInterfaceMethods(methods
+                    .Where(m => !m.IsConstructor && !m.HasGenericParameters)
+                    .GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition.IsInterface, typeDefinition, mustAdd, false);
             }
-            findSameNameButNotOverride(methods
-                .Where(m => !m.IsConstructor && !m.HasGenericParameters)
-                .Concat(mustAdd).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition, typeDefinition, mustAdd);
+
+            if (!typeDefinition.IsInterface)
+            {
+                findSameNameButNotOverride(methods
+                    .Where(m => !m.IsConstructor && !m.HasGenericParameters)
+                    .Concat(mustAdd).GroupBy(t => t.Name).ToDictionary(g => g.Key, g => g.Cast<MethodDefinition>()), typeDefinition, typeDefinition, mustAdd);
+            }
 
             res.Methods = methods
                 .Concat(mustAdd.Where(m => !m.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.ObsoleteAttribute")))
@@ -754,11 +760,14 @@ namespace PuertsGenerator
             } catch { }
         }
 
-        static void addInterfaceMethods(TypeDefinition itf, List<MethodDefinition> result, bool add)
+        static void addInterfaceMethods(Dictionary<string, IEnumerable<MethodDefinition>> methodMap, bool addToInterface, TypeDefinition itf, List<MethodDefinition> result, bool add)
         {
             if (add)
             {
-                result.AddRange(itf.Methods);
+                result.AddRange(itf.Methods.Where(m => {
+                    var r = methodMap.ContainsKey(m.Name);
+                    return addToInterface ? r : !r;
+                    }));
             }
 
             foreach (var itfInfo in itf.Interfaces)
@@ -768,7 +777,7 @@ namespace PuertsGenerator
                     var td = itfInfo.InterfaceType.Resolve();
                     if (td != null)
                     {
-                        addInterfaceMethods(td, result, true);
+                        addInterfaceMethods(methodMap, addToInterface, td, result, true);
                     }
                 } catch { }
             }
