@@ -818,7 +818,7 @@ namespace PuertsGenerator
             //catch { }
         }
 
-        internal static GenCodeData Collect(IEnumerable<TypeDefinition> typesToGen)
+        internal static GenCodeData Collect(IEnumerable<TypeDefinition> typesToGen, bool collectAllReferences)
         {
             var typeInfosToGen = typesToGen.Distinct().Select(CollectInfo).ToArray(); // force referenced types found
             var typesToGenLookup = typesToGen.ToDictionary(t => t.FullName);
@@ -844,10 +844,19 @@ namespace PuertsGenerator
                     }
                 } catch { }
             }
-
             return new GenCodeData
             {
-                Namespaces = typesRefed.Where(t => !typesToGenLookup.ContainsKey(t.FullName)).DistinctBy((t) => t.FullName).Select(CollectInfo).Concat(typeInfosToGen)
+                Namespaces = typesRefed.ToArray().Where(t => !typesToGenLookup.ContainsKey(t.FullName)).DistinctBy((t) => t.FullName)
+                    .Select(t =>
+                    {
+                        if (!collectAllReferences) return CollectInfo(t);
+                        TypeDefinition td = null;
+                        try { td = t.Resolve(); } catch { return null; }
+                        if (td == null) return null;
+                        return CollectInfo(td);
+                    })
+                    .Where(ti => ti != null)
+                    .Concat(typeInfosToGen)
                     .Where(ti => !IsDelegateWithPointer(ti))
                     .GroupBy(ti => ti.Namespace)
                     .Select(g => new NamespaceInfoCollected()

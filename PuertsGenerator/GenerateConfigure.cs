@@ -28,5 +28,6 @@ namespace PuertsGenerator
         public Dictionary<string, AssemblyConfigure> Assemblys { get; set; }
 
         public GenerateHookConfigure[] EnumGenerateHooks { get; set; }
+        public bool CollectAllReferences {  get; set; }
     }
 }

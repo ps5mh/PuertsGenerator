@@ -9,7 +9,9 @@ namespace PuertsGenerator
     internal static class Templates
     {
         public const string IndexDTs = @"{{<ParameterList}}{{ #Parameters }}{{ #IsParams }}...{{ /IsParams }}${{Name}}{{ #IsOptional }}?{{ /IsOptional }}: {{{ParamerterTypeScriptName}}}{{^IsLast}}, {{/IsLast}}{{/Parameters}}{{/ParameterList}}
-declare namespace CS {
+declare module 'csharp' {
+namespace CSharp {
+    namespace Puerts { type JSObject = any; }
     //keep type incompatibility / 此属性保持类型不兼容
     const __keep_incompatibility: unique symbol;
     interface $Ref<T> {
@@ -72,7 +74,7 @@ namespace {{ Name }} {
         Invoke?: ({{{ DelegateParmaters }}}) =>  {{{ DelegateReturnType }}};
     }
     {{ ^HasGenericParameters }}
-    var  {{{ Name }}}: { new (func: () => void):  {{{ Name }}}; }
+    var  {{{ Name }}}: { new (func: ({{{ DelegateParmaters }}}) => void):  {{{ Name }}}; }
     {{/HasGenericParameters}}
     {{ /IsDelegate }}
     {{ /IsEnum }}
@@ -92,6 +94,8 @@ namespace {{ Name }} {
 {{ /IsGlobal }}
 
 {{/Namespaces}}
+}
+export = CSharp
 }
 ";
     }

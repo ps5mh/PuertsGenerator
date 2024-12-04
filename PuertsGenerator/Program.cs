@@ -9,19 +9,40 @@ using System.Text;
 using PuertsGenerator;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 #nullable disable
 
 class Program
 {
 
-    static void AddGenType(TypeDefinition type, List<TypeDefinition> types)
+    static void TryAddGenType(TypeDefinition type, List<TypeDefinition> types, HashSet<string> whitelist, HashSet<string> blacklist)
     {
+        var typeKey = type.FullName;
+        if (whitelist != null)
+        {
+            // 存在白名单就必须白名单有
+            if (!whitelist.Contains(typeKey))
+            {
+                return;
+            }
+        }
+
+        if (blacklist != null)
+        {
+            // 存在黑名单，就必须黑名单没有
+            if (blacklist.Contains(typeKey))
+            {
+                return;
+            }
+        }
+
         if (type.HasNestedTypes)
         {
             foreach (var nt in type.NestedTypes)
             {
-                if (nt.IsNestedPublic && !GenerateInfoCollector.isCompilerGenerated(nt)) AddGenType(nt, types);
+                if (nt.IsNestedPublic && !GenerateInfoCollector.isCompilerGenerated(nt))
+                    TryAddGenType(nt, types, whitelist, blacklist);
             }
         }
 
@@ -84,7 +105,7 @@ class Program
                     var assembly = AssemblyDefinition.ReadAssembly(arg);
                     stopwatch.Stop();
                     Console.WriteLine($"Read {assembly.Name.Name}({arg}) using: {stopwatch.ElapsedMilliseconds} ms");
-                    AssemblyConfigure assemblyConfigure = conf.Assemblys[assembly.Name.Name];
+                    AssemblyConfigure assemblyConfigure = conf.Assemblys.FirstOrDefault(x => new Regex(x.Key).IsMatch(assembly.Name.Name)).Value;
                     HashSet<string> whitelist = null;
                     HashSet<string> blacklist = null;
                     if (assemblyConfigure != null && assemblyConfigure.Whitelist != null)
@@ -112,32 +133,14 @@ class Program
                             {
                                 if (type.Name == "Type" || type.Name == "Array")
                                 {
-                                    AddGenType(type, typesToGen);
-                                    continue;
-                                }
-                            }
-                            var typeKey = string.IsNullOrEmpty(type.Namespace) ? type.Name : $"{type.Namespace}.{type.Name}";
-                            if (whitelist != null)
-                            {
-                                // 存在白名单就必须白名单有
-                                if (!whitelist.Contains(typeKey))
-                                {
-                                    continue;
-                                }
-                            }
-
-                            if (blacklist != null)
-                            {
-                                // 存在黑名单，就必须黑名单没有
-                                if (blacklist.Contains(typeKey))
-                                {
+                                    TryAddGenType(type, typesToGen, null, null);
                                     continue;
                                 }
                             }
 
                             if ((type.IsPublic) && !GenerateInfoCollector.isCompilerGenerated(type) && !type.Name.StartsWith("<"))
                             {
-                                AddGenType(type, typesToGen);
+                                TryAddGenType(type, typesToGen, whitelist, blacklist);
                             }
                         }
                     }
@@ -149,7 +152,7 @@ class Program
             {
                 GenerateInfoCollector.enumGenerateHooks = conf.EnumGenerateHooks;
             }
-            var data = GenerateInfoCollector.Collect(typesToGen);
+            var data = GenerateInfoCollector.Collect(typesToGen, conf.CollectAllReferences);
             stopwatch.Stop();
             Console.WriteLine($"Data Prepare using: {stopwatch.ElapsedMilliseconds} ms, type.Count = {typesToGen.Count}");
 
