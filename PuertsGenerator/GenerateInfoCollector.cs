@@ -199,9 +199,9 @@ namespace PuertsGenerator
 
         static string[] ToLines(string doc)
         {
-            if (doc == null)
+            if (string.IsNullOrEmpty(doc))
             {
-                return null;
+                return EmptyDocumentLines;
             }
             return doc.Split('\n');
         }
@@ -851,7 +851,12 @@ namespace PuertsGenerator
                     {
                         if (!collectAllReferences) return CollectInfo(t);
                         TypeDefinition td = null;
-                        try { td = t.Resolve(); } catch { return null; }
+                        try {
+                            td = t.Resolve(); 
+                        } catch (Exception e){
+                            // Console.WriteLine($"Warning: could not resolve type: {t.FullName}! {e.Message}");
+                            return CollectInfo(t); 
+                        }
                         if (td == null) return null;
                         return CollectInfo(td);
                     })

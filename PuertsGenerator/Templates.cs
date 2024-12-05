@@ -30,7 +30,8 @@ namespace {{ Name }} {
 {{ /IsGlobal }}
 {{ #Types }}
     {{ #DocumentLines }}
-    {{.}}{{ /DocumentLines }}
+    {{.}}
+    {{ /DocumentLines }}
     // {{{ModuleFileName}}} {{AssemblyName}} {{Namespace}}
     {{ #IsEnum }}
     {{DeclareKeyword}} {{{ Name }}} {{{EnumKeyValues}}}
@@ -46,7 +47,8 @@ namespace {{ Name }} {
 
         {{ #Properties }}
         {{ #DocumentLines }}
-        {{.}}{{ /DocumentLines }}
+        {{.}}
+        {{ /DocumentLines }}
         {{ #AsMethod }}
         {{ #Getter }}
         {{^IsInterface}}public {{/IsInterface}}{{ #IsStatic }}static {{/IsStatic}}get {{Name}}(): {{ #PropertyType }}{{{TypeScriptName}}}{{/PropertyType}};
@@ -62,7 +64,8 @@ namespace {{ Name }} {
 
         {{ #Methods }}
         {{ #DocumentLines }}
-        {{.}}{{ /DocumentLines }}
+        {{.}}
+        {{ /DocumentLines }}
         {{^IsInterface}}public {{/IsInterface}}{{ #IsStatic }}static {{/IsStatic}}{{Name}}({{>ParameterList}}){{ ^IsConstructor }}: {{ #ReturnType }}{{{TypeScriptName}}}{{/ReturnType}}{{ /IsConstructor }};
         {{/Methods}}
 
@@ -82,7 +85,8 @@ namespace {{ Name }} {
     interface {{{ Name }}} {
         {{ #ExtensionMethods }}
         {{ #DocumentLines }}
-        {{.}}{{ /DocumentLines }}
+        {{.}}
+        {{ /DocumentLines }}
         {{Name}}({{ #Parameters }}{{ #IsParams }}...{{ /IsParams }}${{Name}}{{ #IsOptional }}?{{ /IsOptional }}: {{{ParamerterTypeScriptName}}}{{^IsLast}}, {{/IsLast}}{{/Parameters}}): {{ #ReturnType }}{{{TypeScriptName}}}{{/ReturnType}};
         {{/ExtensionMethods}}
     }
