@@ -41,7 +41,7 @@ class Program
         {
             foreach (var nt in type.NestedTypes)
             {
-                if (nt.IsNestedPublic && !GenerateInfoCollector.isCompilerGenerated(nt))
+                if (!GenerateInfoCollector.isCompilerGenerated(nt))
                     TryAddGenType(nt, types, whitelist, blacklist);
             }
         }
@@ -111,6 +111,16 @@ class Program
                     if (assemblyConfigure != null && assemblyConfigure.Whitelist != null)
                     {
                         whitelist = assemblyConfigure.Whitelist.ToHashSet();
+                        // append outer class for inner types
+                        foreach (var w in whitelist)
+                        {
+                            var plusIdx = w.IndexOf("+");
+                            plusIdx = plusIdx < 0 ? w.IndexOf("/") : plusIdx;
+                            if (plusIdx > 0)
+                            {
+                                whitelist.Append(w.Substring(0, plusIdx));
+                            }
+                        }
                     }
                     if (assemblyConfigure != null && assemblyConfigure.Blacklist != null)
                     {
@@ -138,7 +148,7 @@ class Program
                                 }
                             }
 
-                            if ((type.IsPublic) && !GenerateInfoCollector.isCompilerGenerated(type) && !type.Name.StartsWith("<"))
+                            if (!GenerateInfoCollector.isCompilerGenerated(type) && !type.Name.StartsWith("<"))
                             {
                                 TryAddGenType(type, typesToGen, whitelist, blacklist);
                             }
