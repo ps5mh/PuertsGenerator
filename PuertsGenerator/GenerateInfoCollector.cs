@@ -863,6 +863,7 @@ namespace PuertsGenerator
                     .Where(ti => ti != null)
                     .Concat(typeInfosToGen)
                     .Where(ti => !IsDelegateWithPointer(ti))
+                    .OrderBy(ti => ti.FullName)
                     .GroupBy(ti => ti.Namespace)
                     .Select(g => new NamespaceInfoCollected()
                     {

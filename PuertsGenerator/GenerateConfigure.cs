@@ -18,9 +18,9 @@ namespace PuertsGenerator
 
     internal class AssemblyConfigure
     {
-        public string[] Whitelist { get; set; }
+        public HashSet<string> Whitelist { get; set; }
 
-        public string[] Blacklist { get; set; }
+        public HashSet<string> Blacklist { get; set; }
     }
 
     internal class GenerateConfigure

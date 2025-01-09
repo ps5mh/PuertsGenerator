@@ -10,6 +10,7 @@ using PuertsGenerator;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Mono.Cecil.Cil;
 
 #nullable disable
 
@@ -18,24 +19,20 @@ class Program
 
     static void TryAddGenType(TypeDefinition type, List<TypeDefinition> types, HashSet<string> whitelist, HashSet<string> blacklist)
     {
-        var typeKey = type.FullName;
-        if (whitelist != null)
+        var typeKey = type.FullName.Replace("+", ".").Replace("/", ".");
+        // 存在白名单就必须白名单有
+        if (whitelist != null && !whitelist.Contains(typeKey))
         {
-            // 存在白名单就必须白名单有
-            if (!whitelist.Contains(typeKey))
-            {
-                return;
-            }
+            return;
         }
+        
 
-        if (blacklist != null)
+        // 存在黑名单，就必须黑名单没有
+        if (blacklist != null && blacklist.Contains(typeKey))
         {
-            // 存在黑名单，就必须黑名单没有
-            if (blacklist.Contains(typeKey))
-            {
-                return;
-            }
+            return;
         }
+      
 
         if (type.HasNestedTypes)
         {
@@ -47,6 +44,25 @@ class Program
         }
 
         types.Add(type);
+    }
+
+    // 1. replace '+' or '/' with '.' 2. append outer scope
+    static HashSet<string> regulate(HashSet<string> set)
+    {
+        var ret = new HashSet<string>();
+        if (set != null)
+        {
+            foreach (var fullName in set)
+            {
+                var plusIdx = fullName.Replace("+", ".").Replace("/", ".");
+                var parts = fullName.Split(".");
+                for (int i = 1; i <= parts.Length; i++)
+                {
+                    ret.Add(string.Join(".", parts, 0, i));
+                }
+            }
+        }
+        return ret;
     }
 
     static void Main(string[] args)
@@ -97,65 +113,72 @@ class Program
                 searchDirectors.Add(Path.GetDirectoryName(Path.GetFullPath(arg)));
             }
 
+            var AssemblysCfgGlobal = new Dictionary<string, AssemblyConfigure>();
+
             foreach (var arg in args.Skip(2))
             {
-                try
+                stopwatch.Start();
+                var assembly = AssemblyDefinition.ReadAssembly(arg);
+                stopwatch.Stop();
+                Console.WriteLine($"Read {assembly.Name.Name}({arg}) using: {stopwatch.ElapsedMilliseconds} ms");
+                AssemblyConfigure assemblyConfigure = conf.Assemblys.FirstOrDefault(x => new Regex("^" + x.Key + "$").IsMatch(assembly.Name.Name)).Value;
+                AssemblyConfigure GassemblyConfigure = AssemblysCfgGlobal.FirstOrDefault(x => new Regex("^" + x.Key + "$").IsMatch(assembly.Name.Name)).Value;
+
+                HashSet<string> whitelist = regulate(assemblyConfigure?.Whitelist).Concat(regulate(GassemblyConfigure?.Whitelist)).ToHashSet();
+                HashSet<string> blacklist = regulate(assemblyConfigure?.Blacklist).Concat(regulate(GassemblyConfigure?.Blacklist)).ToHashSet();
+                stopwatch.Start();
+                foreach (var module in assembly.Modules)
                 {
-                    stopwatch.Start();
-                    var assembly = AssemblyDefinition.ReadAssembly(arg);
-                    stopwatch.Stop();
-                    Console.WriteLine($"Read {assembly.Name.Name}({arg}) using: {stopwatch.ElapsedMilliseconds} ms");
-                    AssemblyConfigure assemblyConfigure = conf.Assemblys.FirstOrDefault(x => new Regex(x.Key).IsMatch(assembly.Name.Name)).Value;
-                    HashSet<string> whitelist = null;
-                    HashSet<string> blacklist = null;
-                    if (assemblyConfigure != null && assemblyConfigure.Whitelist != null)
+                    var baseResolver = module.AssemblyResolver as BaseAssemblyResolver;
+                    if (baseResolver != null)
                     {
-                        whitelist = assemblyConfigure.Whitelist.ToHashSet();
-                        // append outer class for inner types
-                        foreach (var w in whitelist)
+                        foreach (var dir in searchDirectors)
                         {
-                            var plusIdx = w.IndexOf("+");
-                            plusIdx = plusIdx < 0 ? w.IndexOf("/") : plusIdx;
-                            if (plusIdx > 0)
-                            {
-                                whitelist.Append(w.Substring(0, plusIdx));
-                            }
+                            baseResolver.AddSearchDirectory(dir);
                         }
                     }
-                    if (assemblyConfigure != null && assemblyConfigure.Blacklist != null)
+                    foreach (var type in module.Types)
                     {
-                        blacklist = assemblyConfigure.Blacklist.ToHashSet();
-                    }
-                    stopwatch.Start();
-                    foreach (var module in assembly.Modules)
-                    {
-                        var baseResolver = module.AssemblyResolver as BaseAssemblyResolver;
-                        if (baseResolver != null)
+                        if (Path.GetFileName(arg) == "mscorlib.dll")
                         {
-                            foreach (var dir in searchDirectors)
+                            if (type.Name == "Type" || type.Name == "Array")
                             {
-                                baseResolver.AddSearchDirectory(dir);
+                                TryAddGenType(type, typesToGen, null, null);
+                                continue;
                             }
                         }
-                        foreach (var type in module.Types)
+
+                        // collect types from Puerts.ConfigureAttribute
+                        if (type.CustomAttributes.Any(x => x.AttributeType.FullName == "Puerts.ConfigureAttribute"))
                         {
-                            if (Path.GetFileName(arg) == "mscorlib.dll")
+                            var genCfg = type.Properties.Where(x => x.CustomAttributes.Any(x => 
+                                x.AttributeType.FullName == "Puerts.BindingAttribute"
+                                || x.AttributeType.FullName == "Puerts.TypingAttribute"));
+
+                            foreach (var cfg in genCfg)
                             {
-                                if (type.Name == "Type" || type.Name == "Array")
+                                foreach (var ins in cfg.GetMethod.Body.Instructions)
                                 {
-                                    TryAddGenType(type, typesToGen, null, null);
-                                    continue;
+                                    if (ins.OpCode.Code == Code.Ldtoken && (ins.Operand is TypeReference))
+                                    {
+                                        TypeReference refType = ins.Operand as TypeReference;
+                                        AssemblysCfgGlobal.TryGetValue(refType.Scope.Name, out var gcfg);
+                                        gcfg = gcfg ?? new AssemblyConfigure();
+                                        gcfg.Whitelist = gcfg.Whitelist ?? new HashSet<string>();
+                                        var fullName = refType.IsGenericInstance ? refType.GetElementType().FullName : refType.FullName;
+                                        gcfg.Whitelist.Add(fullName.Replace("+", ".").Replace("/", "."));
+                                        AssemblysCfgGlobal[refType.Scope.Name] = gcfg;
+                                    }
                                 }
                             }
+                        }
 
-                            if (!GenerateInfoCollector.isCompilerGenerated(type) && !type.Name.StartsWith("<"))
-                            {
-                                TryAddGenType(type, typesToGen, whitelist, blacklist);
-                            }
+                        if (!GenerateInfoCollector.isCompilerGenerated(type) && !type.Name.StartsWith("<"))
+                        {
+                            TryAddGenType(type, typesToGen, whitelist, blacklist);
                         }
                     }
                 }
-                catch { }
             }
 
             if (conf.EnumGenerateHooks != null)
