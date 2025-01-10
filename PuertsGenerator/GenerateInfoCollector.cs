@@ -14,6 +14,7 @@ namespace PuertsGenerator
 {
     internal class GenerateInfoCollector
     {
+        internal static int ConstEnumThreshold = 0;
         internal static bool isCompilerGenerated(TypeReference type)
         {
             if (type.IsGenericInstance)
@@ -504,7 +505,7 @@ namespace PuertsGenerator
                 if (!info.Proceed)
                 {
                     info.EnumKeyValues = "{ " + string.Join(", ", type.Fields.Where(f => f.Name != "value__" && f.IsPublic).Select(f => f.Name + " = " + f.Constant)) + " }";
-                    info.DeclareKeyword = "enum";
+                    info.DeclareKeyword = (ConstEnumThreshold > 0 && type.Fields.Count >= ConstEnumThreshold) ? "const enum" : "enum";
                 }
                 info.Proceed = true;
                 return;

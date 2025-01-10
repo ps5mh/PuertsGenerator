@@ -113,6 +113,7 @@ class Program
     {
         string jsonString = File.ReadAllText(args[0]);
         GenerateConfigure conf = JsonSerializer.Deserialize<GenerateConfigure>(jsonString);
+        GenerateInfoCollector.ConstEnumThreshold = conf.ConstEnumThreshold;
 
         var output = args[1];
 

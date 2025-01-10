@@ -31,5 +31,6 @@ namespace PuertsGenerator
         public bool CollectAllReferences {  get; set; }
         public string PuertsGenConfigAssemblyPath { get; set; }
         public string[] AssemblyPaths { get; set; }
+        public int ConstEnumThreshold { get; set; }
     }
 }

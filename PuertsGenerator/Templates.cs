@@ -32,7 +32,7 @@ namespace {{ Name }} {
     {{ #DocumentLines }}
     {{.}}
     {{ /DocumentLines }}
-    // {{{ModuleFileName}}} {{AssemblyName}} {{Namespace}}
+    // {{AssemblyName}} {{Namespace}}
     {{ #IsEnum }}
     {{DeclareKeyword}} {{{ Name }}} {{{EnumKeyValues}}}
     {{ /IsEnum }}
