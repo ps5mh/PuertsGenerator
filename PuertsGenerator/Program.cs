@@ -65,6 +65,50 @@ class Program
         return ret;
     }
 
+    static Dictionary<string, AssemblyConfigure> CollectFromPuertsGenConfigure(string assemblyPath)
+    {
+        var assemblyCfg = new Dictionary<string, AssemblyConfigure>();
+        if (!string.IsNullOrEmpty(assemblyPath))
+        {
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+            var assembly = AssemblyDefinition.ReadAssembly(assemblyPath);
+            stopwatch.Stop();
+            Console.WriteLine($"Read {assembly.Name.Name}({assemblyPath}) using: {stopwatch.ElapsedMilliseconds} ms");
+
+            foreach (var module in assembly.Modules)
+            {
+                foreach (var type in module.Types)
+                {
+                    // collect types from Puerts.ConfigureAttribute
+                    if (type.CustomAttributes.Any(x => x.AttributeType.FullName == "Puerts.ConfigureAttribute"))
+                    {
+                        var genCfg = type.Properties.Where(x => x.CustomAttributes.Any(x =>
+                            x.AttributeType.FullName == "Puerts.BindingAttribute"
+                            || x.AttributeType.FullName == "Puerts.TypingAttribute"));
+
+                        foreach (var cfg in genCfg)
+                        {
+                            foreach (var ins in cfg.GetMethod.Body.Instructions)
+                            {
+                                if (ins.OpCode.Code == Code.Ldtoken && (ins.Operand is TypeReference))
+                                {
+                                    TypeReference refType = ins.Operand as TypeReference;
+                                    assemblyCfg.TryGetValue(refType.Scope.Name, out var gcfg);
+                                    gcfg = gcfg ?? new AssemblyConfigure();
+                                    gcfg.Whitelist = gcfg.Whitelist ?? new HashSet<string>();
+                                    var fullName = refType.IsGenericInstance ? refType.GetElementType().FullName : refType.FullName;
+                                    gcfg.Whitelist.Add(fullName.Replace("+", ".").Replace("/", "."));
+                                    assemblyCfg[refType.Scope.Name] = gcfg;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return assemblyCfg;
+    }
     static void Main(string[] args)
     {
         string jsonString = File.ReadAllText(args[0]);
@@ -105,27 +149,23 @@ class Program
             List<TypeDefinition> typesToGen = new List<TypeDefinition>();
 
             Stopwatch stopwatch = new Stopwatch();
+            var getLibFullPath = (string x) => Path.IsPathRooted(x) ? x : Path.GetFullPath(Path.GetDirectoryName(args[0]) + "\\" + x);
+            var assemblyPaths = conf.AssemblyPaths.Select(x => getLibFullPath(x)).Distinct();
+            List<string> searchDirectors = assemblyPaths.Select(x => Path.GetDirectoryName(x)).Distinct().ToList();
+            var puertsCfg = CollectFromPuertsGenConfigure(getLibFullPath(conf.PuertsGenConfigAssemblyPath));
 
-            List<string> searchDirectors = new List<string>();
 
-            foreach (var arg in args.Skip(2))
-            {
-                searchDirectors.Add(Path.GetDirectoryName(Path.GetFullPath(arg)));
-            }
-
-            var AssemblysCfgGlobal = new Dictionary<string, AssemblyConfigure>();
-
-            foreach (var arg in args.Skip(2))
+            foreach (var arg in assemblyPaths)
             {
                 stopwatch.Start();
                 var assembly = AssemblyDefinition.ReadAssembly(arg);
                 stopwatch.Stop();
                 Console.WriteLine($"Read {assembly.Name.Name}({arg}) using: {stopwatch.ElapsedMilliseconds} ms");
                 AssemblyConfigure assemblyConfigure = conf.Assemblys.FirstOrDefault(x => new Regex("^" + x.Key + "$").IsMatch(assembly.Name.Name)).Value;
-                AssemblyConfigure GassemblyConfigure = AssemblysCfgGlobal.FirstOrDefault(x => new Regex("^" + x.Key + "$").IsMatch(assembly.Name.Name)).Value;
+                AssemblyConfigure puertsAssemblyConfigure = puertsCfg.FirstOrDefault(x => new Regex("^" + x.Key + "$").IsMatch(assembly.Name.Name)).Value;
 
-                HashSet<string> whitelist = regulate(assemblyConfigure?.Whitelist).Concat(regulate(GassemblyConfigure?.Whitelist)).ToHashSet();
-                HashSet<string> blacklist = regulate(assemblyConfigure?.Blacklist).Concat(regulate(GassemblyConfigure?.Blacklist)).ToHashSet();
+                HashSet<string> whitelist = regulate(assemblyConfigure?.Whitelist).Concat(regulate(puertsAssemblyConfigure?.Whitelist)).ToHashSet();
+                HashSet<string> blacklist = regulate(assemblyConfigure?.Blacklist).Concat(regulate(puertsAssemblyConfigure?.Blacklist)).ToHashSet();
                 stopwatch.Start();
                 foreach (var module in assembly.Modules)
                 {
@@ -145,31 +185,6 @@ class Program
                             {
                                 TryAddGenType(type, typesToGen, null, null);
                                 continue;
-                            }
-                        }
-
-                        // collect types from Puerts.ConfigureAttribute
-                        if (type.CustomAttributes.Any(x => x.AttributeType.FullName == "Puerts.ConfigureAttribute"))
-                        {
-                            var genCfg = type.Properties.Where(x => x.CustomAttributes.Any(x => 
-                                x.AttributeType.FullName == "Puerts.BindingAttribute"
-                                || x.AttributeType.FullName == "Puerts.TypingAttribute"));
-
-                            foreach (var cfg in genCfg)
-                            {
-                                foreach (var ins in cfg.GetMethod.Body.Instructions)
-                                {
-                                    if (ins.OpCode.Code == Code.Ldtoken && (ins.Operand is TypeReference))
-                                    {
-                                        TypeReference refType = ins.Operand as TypeReference;
-                                        AssemblysCfgGlobal.TryGetValue(refType.Scope.Name, out var gcfg);
-                                        gcfg = gcfg ?? new AssemblyConfigure();
-                                        gcfg.Whitelist = gcfg.Whitelist ?? new HashSet<string>();
-                                        var fullName = refType.IsGenericInstance ? refType.GetElementType().FullName : refType.FullName;
-                                        gcfg.Whitelist.Add(fullName.Replace("+", ".").Replace("/", "."));
-                                        AssemblysCfgGlobal[refType.Scope.Name] = gcfg;
-                                    }
-                                }
                             }
                         }
 

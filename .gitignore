@@ -2,3 +2,6 @@
 bin
 obj
 libs
+*.user
+runtime/GenerateCfg.json
+PuertsGenerator/Properties/launchSettings.json
